@@ -1,0 +1,77 @@
+@model IEnumerable<FitTrack.Models.WorkoutLog>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ExerciseName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UserProfileId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UserProfile)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CompletedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.SetsCompleted)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RepetitionsCompleted)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.WeightUsed)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notes)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(model => item.ExerciseName)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.UserProfileId)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.UserProfile)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.CompletedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.SetsCompleted)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.RepetitionsCompleted)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.WeightUsed)
+            </td>
+            <td>
+                @Html.DisplayFor(model => item.Notes)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

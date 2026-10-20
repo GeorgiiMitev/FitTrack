@@ -1,0 +1,66 @@
+@model FitTrack.Models.PlanExercise
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create</h1>
+
+<h4>PlanExercise</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="ExerciseName" class="control-label"></label>
+                <input asp-for="ExerciseName" class="form-control" />
+                <span asp-validation-for="ExerciseName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="WorkoutPlanId" class="control-label"></label>
+                <input asp-for="WorkoutPlanId" class="form-control" />
+                <span asp-validation-for="WorkoutPlanId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="WorkoutPlan" class="control-label"></label>
+                <input asp-for="WorkoutPlan" class="form-control" />
+                <span asp-validation-for="WorkoutPlan" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="DayOfTheWeek" class="control-label"></label>
+                <input asp-for="DayOfTheWeek" class="form-control" />
+                <span asp-validation-for="DayOfTheWeek" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Sets" class="control-label"></label>
+                <input asp-for="Sets" class="form-control" />
+                <span asp-validation-for="Sets" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Repetitions" class="control-label"></label>
+                <input asp-for="Repetitions" class="form-control" />
+                <span asp-validation-for="Repetitions" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="RestSeconds" class="control-label"></label>
+                <input asp-for="RestSeconds" class="form-control" />
+                <span asp-validation-for="RestSeconds" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>

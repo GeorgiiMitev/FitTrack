@@ -1,0 +1,69 @@
+@model FitTrack.Models.UserProfile
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>UserProfile</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Edit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Goal" class="control-label"></label>
+                <input asp-for="Goal" class="form-control" />
+                <span asp-validation-for="Goal" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="TrainingDaysPerWeek" class="control-label"></label>
+                <input asp-for="TrainingDaysPerWeek" class="form-control" />
+                <span asp-validation-for="TrainingDaysPerWeek" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="SessionDurationMinutes" class="control-label"></label>
+                <input asp-for="SessionDurationMinutes" class="form-control" />
+                <span asp-validation-for="SessionDurationMinutes" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Equipment" class="control-label"></label>
+                <input asp-for="Equipment" class="form-control" />
+                <span asp-validation-for="Equipment" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="WorkoutPlans" class="control-label"></label>
+                <input asp-for="WorkoutPlans" class="form-control" />
+                <span asp-validation-for="WorkoutPlans" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="WorkoutLogs" class="control-label"></label>
+                <input asp-for="WorkoutLogs" class="form-control" />
+                <span asp-validation-for="WorkoutLogs" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="ProgressEntries" class="control-label"></label>
+                <input asp-for="ProgressEntries" class="form-control" />
+                <span asp-validation-for="ProgressEntries" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

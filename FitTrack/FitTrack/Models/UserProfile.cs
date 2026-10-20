@@ -1,4 +1,5 @@
 ﻿namespace FitTrack.Models
+
 {
     public class UserProfile
     {
@@ -15,7 +16,8 @@
 
         public byte TrainingDaysPerWeek { get; set; }
         public byte SessionDurationMinutes { get; set; }
-        public List<Equipment> Equipment { get; set; } = new List<Equipment>();
+
+        public List<string> Equipment { get; set; }
 
         public ICollection<WorkoutPlan> WorkoutPlans { get; set; }
         public ICollection<WorkoutLog> WorkoutLogs { get; set; }

@@ -1,27 +1,37 @@
-﻿namespace FitTrack.Models
+﻿using System.ComponentModel.DataAnnotations;
+namespace FitTrack.Models;
 
+public class UserProfile
 {
-    public class UserProfile
+
+    //[MaxLength(100)]
+    //public string? GoogleBookId { get; set; }
+    public int Id { get; set; }
+    [Required]
+    public string IdentityUserId { get; set; } = string.Empty;
+    public ApplicationUser? IdentityUser { get; set; }
+    [Required, StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+    [Required, StringLength(500)]
+    public string Goal { get; set; } = string.Empty;
+    public enum ExperienceLevel
     {
-        public int Id {  get; set; }
-        public string Name { get; set; }
-        public string Goal {  get; set; }
-        public enum ExperienceLevel
-        {
-            Beginner,
-            Intermediate,
-            Advanced,
-            Professional
-        }
-
-        public byte TrainingDaysPerWeek { get; set; }
-        public byte SessionDurationMinutes { get; set; }
-
-        public List<string> Equipment { get; set; }
-
-        public ICollection<WorkoutPlan> WorkoutPlans { get; set; }
-        public ICollection<WorkoutLog> WorkoutLogs { get; set; }
-        public ICollection<ProgressEntry> ProgressEntries { get; set; }
-
+        Beginner,
+        Intermediate,
+        Advanced,
+        Professional
     }
+
+    [Range(1, 7)]
+    public byte TrainingDaysPerWeek { get; set; }
+    [Range(10, 300)]
+    public byte SessionDurationMinutes { get; set; }
+
+    public List<string> Equipment { get; set; } = new();
+
+    public ICollection<WorkoutPlan> WorkoutPlans { get; set; } = new List<WorkoutPlan>();
+    public ICollection<WorkoutLog> WorkoutLogs { get; set; } = new List<WorkoutLog>();
+    public ICollection<ProgressEntry> ProgressEntries { get; set; } = new List<ProgressEntry>();
+
 }
+

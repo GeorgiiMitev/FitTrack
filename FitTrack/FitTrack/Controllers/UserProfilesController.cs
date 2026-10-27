@@ -7,10 +7,11 @@ using FitTrack.Data;
 public class UserProfilesController : Controller
 {
     private readonly AppDbContext _context;
-
-    public UserProfilesController(AppDbContext context)
+    private readonly HttpClient _openAiClient;
+    public UserProfilesController(AppDbContext context, HttpClient openAiClient, IHttpClientFactory factory)
     {
         _context = context;
+        _openAiClient = factory.CreateClient("OpenAI");
     }
 
     // GET: USERPROFILES

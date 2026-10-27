@@ -29,3 +29,31 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+/* Center account forms in the available viewport area. */
+.account-main {
+    min-height: calc(100vh - 170px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.account-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.account-card {
+    width: min(100%, 440px);
+    padding: 2rem;
+    border: 1px solid #dee2e6;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.08);
+}
+
+.account-card h1 {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}

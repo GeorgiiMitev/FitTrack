@@ -10,7 +10,7 @@ namespace FitTrack.Controllers;
 public sealed class ProgressController(AppDbContext db) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(int? year, int? month, string? date, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(int? year, int? month, string? date, string? measurementExercise, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
@@ -57,12 +57,20 @@ public sealed class ProgressController(AppDbContext db) : Controller
                 .Where(log => log.UserProfileId == profile.Id && log.CompletedAt >= startUtc && log.CompletedAt < endUtc)
                 .OrderBy(log => log.CompletedAt).ToListAsync(cancellationToken);
         }
-        var measurements = await db.ProgressEntries.AsNoTracking().Where(entry => entry.UserProfileId == profile.Id)
-            .OrderByDescending(entry => entry.Date).Take(20).ToListAsync(cancellationToken);
+        var measurementExercises = await db.ProgressEntries.AsNoTracking().Where(entry => entry.UserProfileId == profile.Id)
+            .Select(entry => entry.ExerciseName).Distinct().OrderBy(name => name).ToListAsync(cancellationToken);
+        measurementExercise = measurementExercises.FirstOrDefault(name => name.Equals(measurementExercise, StringComparison.OrdinalIgnoreCase))
+            ?? await db.ProgressEntries.AsNoTracking().Where(entry => entry.UserProfileId == profile.Id)
+                .OrderByDescending(entry => entry.Date).Select(entry => entry.ExerciseName).FirstOrDefaultAsync(cancellationToken);
+        var measurementsQuery = db.ProgressEntries.AsNoTracking().Where(entry => entry.UserProfileId == profile.Id);
+        if (!string.IsNullOrEmpty(measurementExercise))
+            measurementsQuery = measurementsQuery.Where(entry => entry.ExerciseName == measurementExercise);
+        var measurements = await measurementsQuery.OrderByDescending(entry => entry.Date).Take(20).ToListAsync(cancellationToken);
         return View(new ProgressCalendarViewModel
         {
             Year = selectedYear, Month = selectedMonth, SelectedDate = selectedDate,
             ActiveDates = activeDates, SelectedLogs = selectedLogs, Measurements = measurements,
+            MeasurementExercise = measurementExercise, MeasurementExercises = measurementExercises,
             RecentLogs = recentLogs.Take(12).ToList(),
             WorkoutsThisMonth = activityLogs.Where(log => !string.IsNullOrEmpty(log.WorkoutSessionId)).Select(log => log.WorkoutSessionId).Distinct().Count(),
             ActiveDaysThisMonth = activeDates.Count,

@@ -9,13 +9,20 @@ namespace FitTrack.Controllers;
 public sealed class WorkoutLogsController(AppDbContext db) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(string? search, DateOnly? from, DateOnly? to, string? sort, int page = 1, CancellationToken cancellationToken = default)
     {
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
-        var logs = await db.WorkoutLogs.AsNoTracking().Include(item => item.WorkoutPlan)
-            .Where(item => item.UserProfileId == profile.Id).OrderByDescending(item => item.CompletedAt).ToListAsync(cancellationToken);
-        return View(logs);
+        var query = db.WorkoutLogs.AsNoTracking().Include(item => item.WorkoutPlan).Where(item => item.UserProfileId == profile.Id);
+        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(item => item.ExerciseName.Contains(search) || (item.WorkoutPlan != null && item.WorkoutPlan.Name.Contains(search)));
+        if (from is not null) query = query.Where(item => item.CompletedAt >= from.Value.ToDateTime(TimeOnly.MinValue).ToUniversalTime());
+        if (to is not null) query = query.Where(item => item.CompletedAt < to.Value.AddDays(1).ToDateTime(TimeOnly.MinValue).ToUniversalTime());
+        sort = sort == "oldest" ? "oldest" : "newest";
+        var totalItems = await query.CountAsync(cancellationToken);
+        page = Math.Clamp(page, 1, Math.Max(1, (int)Math.Ceiling(totalItems / 20d)));
+        query = sort == "oldest" ? query.OrderBy(item => item.CompletedAt) : query.OrderByDescending(item => item.CompletedAt);
+        var logs = await query.Skip((page - 1) * 20).Take(20).ToListAsync(cancellationToken);
+        return View(new WorkoutHistoryViewModel { Logs = logs, Search = search, From = from, To = to, Sort = sort, Page = page, TotalItems = totalItems });
     }
 
     [HttpGet]
@@ -32,7 +39,7 @@ public sealed class WorkoutLogsController(AppDbContext db) : Controller
             UserProfileId = profile.Id, ExerciseName = model.ExerciseName.Trim(),
             CompletedAt = DateTime.SpecifyKind(model.CompletedAt, DateTimeKind.Local).ToUniversalTime(),
             WorkoutSessionId = Guid.NewGuid().ToString("N"), SetsCompleted = model.SetsCompleted,
-            RepetitionsCompleted = model.RepetitionsCompleted, WeightUsed = model.WeightUsed, Notes = model.Notes.Trim()
+            RepetitionsCompleted = model.RepetitionsCompleted, WeightUsed = model.WeightUsed, Notes = model.Notes?.Trim() ?? string.Empty
         });
         await db.SaveChangesAsync(cancellationToken);
         return RedirectToAction(nameof(Index));

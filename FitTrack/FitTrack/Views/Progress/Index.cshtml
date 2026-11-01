@@ -18,8 +18,19 @@
     <header class="mb-4">
         <h1>Progress</h1>
         <p class="progress-intro">Track workout consistency, review your training history, and follow your recorded strength measurements over time.</p>
+        @if (Model.MeasurementExercises.Count > 0)
+        {
+            <form asp-action="Index" method="get" class="row g-2 align-items-end mt-2">
+                <input type="hidden" name="year" value="@Model.Year" />
+                <input type="hidden" name="month" value="@Model.Month" />
+                <div class="col-auto"><label class="form-label" for="measurementExercise">Lift to chart</label><select class="form-select" id="measurementExercise" name="measurementExercise">
+                    @foreach (var exercise in Model.MeasurementExercises) { <option value="@exercise" selected="@(exercise == Model.MeasurementExercise ? "selected" : null)">@exercise</option> }
+                </select></div><div class="col-auto"><button class="btn btn-outline-primary" type="submit">Update chart</button></div>
+            </form>
+        }
     </header>
     @if (TempData["WorkoutSaved"] is string message) { <p role="status" class="alert alert-success">@message</p> }
+    @if (TempData["ProgressEntrySaved"] is string savedMessage) { <p role="status" class="alert alert-success">@savedMessage</p> }
 
     <section aria-labelledby="month-summary-heading" class="mb-4">
         <h2 id="month-summary-heading" class="h5 mb-3">@first.ToString("MMMM yyyy") summary</h2>
@@ -44,6 +55,7 @@
                     {
                         var y = 208 - grid * 85;
                         <line x1="48" y1="@y" x2="750" y2="@y" class="progress-gridline" />
+                        @:<text x="40" y="@(y + 4)" text-anchor="end" class="progress-axis-label">@((int)Math.Round(maxWeeklyWorkouts * grid / 2d))</text>
                     }
                     @for (var i = 0; i < Model.WeeklyActivity.Count; i++)
                     {
@@ -52,6 +64,7 @@
                         var barHeight = point.Workouts / (double)maxWeeklyWorkouts * 170;
                         var barY = 208 - barHeight;
                         <rect x="@x" y="@barY.ToString("0.##", CultureInfo.InvariantCulture)" width="42" height="@Math.Max(0, barHeight).ToString("0.##", CultureInfo.InvariantCulture)" class="progress-bar"><title>@point.Workouts workouts, week of @point.WeekStarting</title></rect>
+                        @:<text x="@(x + 21)" y="228" text-anchor="middle" class="progress-axis-label">@point.WeekStarting.ToString("M/d")</text>
                     }
                 </svg>
                 <div class="table-responsive"><table class="table progress-table table-sm mb-0"><thead><tr><th>Week of</th><th>Workouts</th><th>Active days</th><th>Sets</th><th>Load volume¹</th></tr></thead><tbody>
@@ -63,7 +76,7 @@
         <div class="col-12 col-xl-5">
             <section class="progress-card" aria-labelledby="weight-chart-title">
                 <h2 id="weight-chart-title">Recorded max-weight trend</h2>
-                <p class="small text-muted">Based on the measurements you have entered.</p>
+                <p class="small text-muted">@Model.MeasurementExercise · based on the measurements you have entered.</p>
                 @if (measurementSeries.Count == 0)
                 {
                     <p class="progress-empty">Add a progress measurement to start your trend chart.</p>
@@ -77,6 +90,7 @@
                         {
                             var y = 190 - grid * 75;
                             <line x1="45" y1="@y" x2="525" y2="@y" class="progress-gridline" />
+                            @:<text x="40" y="@(y + 4)" text-anchor="end" class="progress-axis-label">@((grid == 2 ? maxWeight : grid == 0 ? minWeight : (minWeight + maxWeight) / 2).ToString("0.#"))</text>
                         }
                         @if (measurementSeries.Count > 1)
                         {
@@ -95,6 +109,11 @@
                             var y = 190 - (double)((entry.MaxWeight - minWeight) / weightRange) * 150;
                             <circle cx="@x.ToString("0.##", CultureInfo.InvariantCulture)" cy="@y.ToString("0.##", CultureInfo.InvariantCulture)" r="5" class="progress-point"><title>@entry.Date · @entry.MaxWeight kg</title></circle>
                         }
+                        @Html.Raw($"<text x=\"50\" y=\"224\" text-anchor=\"start\" class=\"progress-axis-label\">{Html.Encode(measurementSeries.First().Date.ToString("MMM d"))}</text>")
+                        @if (measurementSeries.Count > 1)
+                        {
+                            @:<text x="520" y="224" text-anchor="end" class="progress-axis-label">@measurementSeries.Last().Date.ToString("MMM d")</text>
+                        }
                     </svg>
                     <p class="small text-muted">Recorded measurements range from @minWeight kg to @maxWeight kg.</p>
                     <p class="small mb-0">Weight values in kg. Add consistent measurements to compare progress meaningfully.</p>
@@ -105,9 +124,9 @@
 
     <section class="progress-card mb-4" aria-labelledby="calendar-heading">
         <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-            <a asp-action="Index" asp-route-year="@previous.Year" asp-route-month="@previous.Month" aria-label="Previous month">&laquo; Previous</a>
+            <a class="btn btn-light btn-sm" asp-action="Index" asp-route-year="@previous.Year" asp-route-month="@previous.Month" asp-route-measurementExercise="@Model.MeasurementExercise" aria-label="Previous month">&laquo; Previous</a>
             <h2 id="calendar-heading" class="h5 mb-0">Activity calendar · @first.ToString("MMMM yyyy")</h2>
-            <a asp-action="Index" asp-route-year="@next.Year" asp-route-month="@next.Month" aria-label="Next month">Next &raquo;</a>
+            <a class="btn btn-light btn-sm" asp-action="Index" asp-route-year="@next.Year" asp-route-month="@next.Month" asp-route-measurementExercise="@Model.MeasurementExercise" aria-label="Next month">Next &raquo;</a>
         </div>
         <p class="small text-muted">Days with a blue marker include saved workout activity. Select a day to inspect its workout details.</p>
         <div class="table-responsive">
@@ -128,7 +147,7 @@
                             var date = new DateOnly(Model.Year, Model.Month, dayNumber);
                             var active = Model.ActiveDates.Contains(date);
                             var selected = Model.SelectedDate == date;
-                            <td><a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-date="@date.ToString("yyyy-MM-dd")" aria-label="@date.ToString("D")@(active ? ", workout recorded" : "")" aria-current="@(selected ? "date" : null)">@dayNumber@if (active) { <span class="visually-hidden">workout recorded</span> }</a></td>
+                            <td><a class="@(active ? "has-workout" : "")" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-date="@date.ToString("yyyy-MM-dd")" asp-route-measurementExercise="@Model.MeasurementExercise" aria-label="@date.ToString("D")@(active ? ", workout recorded" : "")" aria-current="@(selected ? "date" : null)">@dayNumber@if (active) { <span class="visually-hidden">workout recorded</span> }</a></td>
                         }
                     }
                     </tr>
@@ -175,8 +194,8 @@
                 @if (Model.Measurements.Count == 0) { <p class="progress-empty">No measurements recorded yet.</p> }
                 else
                 {
-                    <div class="table-responsive"><table class="table progress-table mb-0"><thead><tr><th>Date</th><th>Recorded max weight</th></tr></thead><tbody>
-                    @foreach (var entry in Model.Measurements) { <tr><td>@entry.Date.ToString("MMM d, yyyy")</td><td>@entry.MaxWeight kg</td></tr> }
+                    <div class="table-responsive"><table class="table progress-table mb-0"><thead><tr><th>Date</th><th>Exercise</th><th>Recorded max weight</th><th></th></tr></thead><tbody>
+                    @foreach (var entry in Model.Measurements) { var entryDate = entry.Date.ToString("MMM d, yyyy"); <tr><td>@entryDate</td><td>@entry.ExerciseName</td><td>@entry.MaxWeight kg</td><td><div class="table-actions"><a class="btn btn-light btn-sm" asp-controller="ProgressEntries" asp-action="Edit" asp-route-id="@entry.Id">Edit</a><form asp-controller="ProgressEntries" asp-action="Delete" asp-route-id="@entry.Id" method="post" data-confirm="Remove the @entry.ExerciseName measurement from @entryDate?"><button class="btn btn-link btn-sm text-danger" type="submit">Remove</button></form></div></td></tr> }
                     </tbody></table></div>
                 }
             </section>

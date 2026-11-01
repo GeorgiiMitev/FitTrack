@@ -1,6 +1,16 @@
 @model IEnumerable<FitTrack.Models.PlanExercise>
-@{ ViewData["Title"] = "Planned exercises"; }
-<h1>Planned exercises</h1>
-<table class="table"><thead><tr><th>Plan</th><th>Day</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Rest (seconds)</th></tr></thead><tbody>
-@foreach (var exercise in Model) { <tr><td><a asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@exercise.WorkoutPlanId">@exercise.WorkoutPlan?.Name</a></td><td>@((DayOfWeek)exercise.DayOfTheWeek)</td><td>@exercise.ExerciseName</td><td>@exercise.Sets</td><td>@exercise.Repetitions</td><td>@exercise.RestSeconds</td></tr> }
-</tbody></table>
+@{ var exercises = Model.ToList(); ViewData["Title"] = "Planned exercises"; }
+<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-controller="WorkoutPlans" asp-action="Index">← Workout plans</a><span class="eyebrow d-block mt-3">YOUR PRESCRIPTIONS</span><h1 class="mt-1">Planned exercises</h1><p>Review exercises across your saved plans.</p></div></header>
+@if (exercises.Count == 0)
+{
+    <div class="empty-state"><h2>No planned exercises yet</h2><p>Create a workout plan to see your exercise prescriptions here.</p><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Manual">Create a plan</a></div>
+}
+else
+{
+    <div class="table-responsive"><table class="table table-hover"><thead><tr><th>Exercise</th><th>Plan</th><th>Day</th><th>Prescription</th><th>Rest</th><th><span class="visually-hidden">Details</span></th></tr></thead><tbody>
+    @foreach (var exercise in exercises)
+    {
+        <tr><td class="fw-semibold"><a asp-action="Details" asp-route-id="@exercise.Id">@exercise.ExerciseName</a></td><td><a asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@exercise.WorkoutPlanId">@exercise.WorkoutPlan?.Name</a></td><td>@((DayOfWeek)exercise.DayOfTheWeek)</td><td>@exercise.Sets sets × @exercise.Repetitions reps</td><td>@exercise.RestSeconds sec</td><td><a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@exercise.Id">Details</a></td></tr>
+    }
+    </tbody></table></div>
+}

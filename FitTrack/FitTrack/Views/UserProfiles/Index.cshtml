@@ -1,14 +1,15 @@
 @model FitTrack.Models.ProfileEditViewModel
 @{ ViewData["Title"] = "My profile"; }
-<h1>My profile</h1>
-<img src="@(Model.CurrentPhotoPath ?? "/images/default-profile.svg")" alt="Profile photo" width="128" height="128" />
-<dl class="row mt-3">
-    <dt class="col-sm-3">Name</dt><dd class="col-sm-9">@Model.Name</dd>
-    <dt class="col-sm-3">Goal</dt><dd class="col-sm-9">@Model.Goal</dd>
-    <dt class="col-sm-3">Experience</dt><dd class="col-sm-9">@Model.ExperienceLevel</dd>
-    <dt class="col-sm-3">Training days</dt><dd class="col-sm-9">@string.Join(", ", Model.PreferredTrainingDays)</dd>
-    <dt class="col-sm-3">Session duration</dt><dd class="col-sm-9">@Model.SessionDurationMinutes minutes</dd>
-    <dt class="col-sm-3">Equipment</dt><dd class="col-sm-9">@string.Join(", ", Model.Equipment)</dd>
-</dl>
-<p><a asp-action="Edit" class="btn btn-primary">Edit profile</a></p>
-@if (TempData["ProfileSaved"] is string saved) { <p role="status">@saved</p> }
+<header class="page-header"><div class="page-header-copy"><span class="eyebrow">YOUR PREFERENCES</span><h1>My profile</h1><p>FitTrack uses these details to tailor suggested plans and coaching.</p></div><div class="page-actions"><a class="btn btn-primary" asp-action="Edit">Edit profile</a></div></header>
+@if (TempData["ProfileSaved"] is string saved) { <div class="alert alert-success" role="status">@saved</div> }
+<section class="app-card profile-summary-card mb-3">
+    <div class="profile-summary-top"><img class="profile-photo" src="@(Model.CurrentPhotoPath ?? "/images/default-profile.svg")" alt="Profile photo for @Model.Name" width="112" height="112" /><div><span class="eyebrow">FITNESS PROFILE</span><h2 class="h3 mb-1">@Model.Name</h2><p class="text-secondary mb-0">@Model.Goal</p></div></div>
+    <hr class="my-4" />
+    <dl class="details-list profile-details">
+        <dt>Experience</dt><dd>@Model.ExperienceLevel</dd>
+        <dt>Preferred training days</dt><dd>@(Model.PreferredTrainingDays.Count == 0 ? "Not set" : string.Join(", ", Model.PreferredTrainingDays))</dd>
+        <dt>Session length</dt><dd>@Model.SessionDurationMinutes minutes</dd>
+        <dt>Available equipment</dt><dd>@(Model.Equipment.Count == 0 ? "Not set" : string.Join(", ", Model.Equipment))</dd>
+    </dl>
+</section>
+<p class="small text-secondary">Keep your profile up to date so exercise suggestions reflect what you can actually use.</p>

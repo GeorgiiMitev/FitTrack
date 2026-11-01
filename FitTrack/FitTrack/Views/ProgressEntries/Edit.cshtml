@@ -1,10 +1,12 @@
 @model FitTrack.Models.ProgressEntry
-@{ ViewData["Title"] = "Edit progress measurement"; }
-<h1>Edit progress measurement</h1>
-<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+@{ ViewData["Title"] = "Edit measurement"; }
+<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-controller="Progress" asp-action="Index">← Progress</a><span class="eyebrow d-block mt-3">STRENGTH TRACKING</span><h1 class="mt-1">Edit measurement</h1><p>Keep this entry tied to one lift so its history stays meaningful.</p></div></header>
+<section class="app-card form-card"><form asp-action="Edit" asp-route-id="@Model.Id" method="post" data-loading data-loading-label="Saving changes…">
     <input type="hidden" asp-for="Id" />
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="mb-3"><label asp-for="MaxWeight">Max weight (kg)</label><input asp-for="MaxWeight" class="form-control" min="0.1" max="1000" step="0.1" /><span asp-validation-for="MaxWeight" class="text-danger"></span></div>
-    <div class="mb-3"><label asp-for="Date"></label><input asp-for="Date" class="form-control" type="date" /><span asp-validation-for="Date" class="text-danger"></span></div>
-    <button type="submit" class="btn btn-primary">Save changes</button>
-</form>
+    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+    <div class="mb-3"><label asp-for="ExerciseName" class="form-label">Exercise or lift</label><input asp-for="ExerciseName" class="form-control" /><span asp-validation-for="ExerciseName" class="field-validation-error small"></span></div>
+    <div class="mb-3"><label asp-for="MaxWeight" class="form-label">Max weight lifted</label><div class="input-group"><input asp-for="MaxWeight" class="form-control" min="0.1" max="1000" step="0.1" /><span class="input-group-text">kg</span></div><span asp-validation-for="MaxWeight" class="field-validation-error small"></span></div>
+    <div class="mb-4"><label asp-for="Date" class="form-label">Measurement date</label><input asp-for="Date" class="form-control" type="date" /><span asp-validation-for="Date" class="field-validation-error small"></span></div>
+    <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">Save changes</button><a class="btn btn-light" asp-controller="Progress" asp-action="Index">Cancel</a></div>
+</form></section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

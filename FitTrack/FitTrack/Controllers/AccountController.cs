@@ -62,7 +62,7 @@ public class AccountController : Controller
             }
             return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToAction("Index", "Home");
         }
-        ModelState.AddModelError(string.Empty, "Невалиден опит за вход.");
+        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
         return View(model);
     }
 

@@ -1,5 +1,12 @@
 @model FitTrack.Models.WorkoutLog
-@{ ViewData["Title"] = "Workout details"; }
-<h1>@Model.ExerciseName</h1>
-<dl class="row"><dt class="col-sm-3">Completed</dt><dd class="col-sm-9">@Model.CompletedAt.ToLocalTime().ToString("f")</dd><dt class="col-sm-3">Sets and repetitions</dt><dd class="col-sm-9">@Model.SetsCompleted × @Model.RepetitionsCompleted</dd><dt class="col-sm-3">Weight</dt><dd class="col-sm-9">@Model.WeightUsed kg</dd><dt class="col-sm-3">Plan</dt><dd class="col-sm-9">@(Model.WorkoutPlan?.Name ?? "Manual workout")</dd><dt class="col-sm-3">Notes</dt><dd class="col-sm-9">@Model.Notes</dd></dl>
-<a asp-action="Index">Back to history</a>
+@{ ViewData["Title"] = "Workout entry"; }
+<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-action="Index">← Workout history</a><span class="eyebrow d-block mt-3">WORKOUT ENTRY</span><h1>@Model.ExerciseName</h1><p>@Model.CompletedAt.ToLocalTime().ToString("MMMM d, yyyy · h:mm tt")</p></div><div class="page-actions"><form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="Delete this entry from your workout history?"><button type="submit" class="btn btn-outline-danger">Delete entry</button></form></div></header>
+<section class="app-card form-card">
+    <dl class="details-list">
+        <dt>Sets completed</dt><dd>@Model.SetsCompleted</dd>
+        <dt>Repetitions per set</dt><dd>@Model.RepetitionsCompleted</dd>
+        <dt>External weight</dt><dd>@Model.WeightUsed kg</dd>
+        <dt>Plan</dt><dd>@(Model.WorkoutPlan?.Name ?? "Individual entry")</dd>
+        <dt>Notes</dt><dd>@(string.IsNullOrWhiteSpace(Model.Notes) ? "No notes" : Model.Notes)</dd>
+    </dl>
+</section>

@@ -1,25 +1,42 @@
 @model FitTrack.Models.WorkoutCompletionViewModel
 @{ ViewData["Title"] = "Log completed workout"; }
-<h1>Log workout: @Model.PlanName</h1>
-<p>Choose the exercises you actually completed. Unchecked exercises will not be logged.</p>
-<form asp-action="Complete" method="post">
+<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-action="Details" asp-route-id="@Model.PlanId">← @Model.PlanName</a><span class="eyebrow d-block mt-3">WORKOUT LOG</span><h1>Log your session</h1><p>Choose a training day, then mark the exercises you completed. Unchecked exercises won’t be saved.</p></div></header>
+@if (Model.PlanWeekdays.Count > 0)
+{
+    <form asp-action="Complete" asp-route-id="@Model.PlanId" method="get" class="row g-2 align-items-end mb-4">
+        <div class="col-auto"><label for="weekday" class="form-label">Training day</label><select id="weekday" name="weekday" class="form-select">
+            @foreach (var day in Model.PlanWeekdays) { <option value="@day" selected="@(Model.SelectedWeekday == day ? "selected" : null)">@day</option> }
+        </select></div>
+        <div class="col-auto"><button type="submit" class="btn btn-outline-primary">Load day</button></div>
+    </form>
+}
+@if (Model.Exercises.Count == 0)
+{
+    <div class="alert alert-info" role="status">This plan has no exercises assigned to a training day yet.</div>
+}
+else
+{
+<div class="section-heading mt-0"><div><h2>@Model.SelectedWeekday session</h2><p>Enter what you completed today. Prescribed sets and reps are prefilled.</p></div></div>
+<form asp-action="Complete" method="post" data-loading data-loading-label="Saving workout…">
     <input type="hidden" asp-for="PlanId" />
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="SelectedWeekday" />
+    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
     @for (var i = 0; i < Model.Exercises.Count; i++)
     {
-        <fieldset class="border rounded p-3 mb-3">
-            <legend class="h5">@Model.Exercises[i].ExerciseName</legend>
+        <fieldset class="workout-entry-card mb-3">
+            <legend>@Model.Exercises[i].ExerciseName</legend>
             <input type="hidden" asp-for="Exercises[i].PlanExerciseId" />
             <input type="hidden" asp-for="Exercises[i].ExerciseName" />
             <input type="hidden" asp-for="Exercises[i].PrescribedSets" />
             <input type="hidden" asp-for="Exercises[i].PrescribedRepetitions" />
-            <label class="form-check"><input asp-for="Exercises[i].Completed" class="form-check-input" /> Completed</label>
-            <label asp-for="Exercises[i].SetsCompleted">Sets</label><input asp-for="Exercises[i].SetsCompleted" class="form-control" min="1" max="20" />
-            <label asp-for="Exercises[i].RepetitionsCompleted">Repetitions</label><input asp-for="Exercises[i].RepetitionsCompleted" class="form-control" min="1" max="100" />
-            <label asp-for="Exercises[i].WeightUsed">Weight (kg)</label><input asp-for="Exercises[i].WeightUsed" class="form-control" min="0" max="1000" step="0.1" />
-            <label asp-for="Exercises[i].Notes">Notes</label><textarea asp-for="Exercises[i].Notes" class="form-control"></textarea>
+            <label class="form-check workout-complete-toggle"><input asp-for="Exercises[i].Completed" class="form-check-input" /><span>Mark this exercise complete</span></label>
+            <div class="row g-3 mt-1"><div class="col-6 col-md-3"><label asp-for="Exercises[i].SetsCompleted" class="form-label">Sets</label><input asp-for="Exercises[i].SetsCompleted" class="form-control" min="1" max="20" /><span class="form-text">Planned: @Model.Exercises[i].PrescribedSets</span></div>
+            <div class="col-6 col-md-3"><label asp-for="Exercises[i].RepetitionsCompleted" class="form-label">Reps per set</label><input asp-for="Exercises[i].RepetitionsCompleted" class="form-control" min="1" max="100" /><span class="form-text">Planned: @Model.Exercises[i].PrescribedRepetitions</span></div>
+            <div class="col-12 col-md-3"><label asp-for="Exercises[i].WeightUsed" class="form-label">Weight (kg)</label><input asp-for="Exercises[i].WeightUsed" class="form-control" min="0" max="1000" step="0.1" /></div>
+            <div class="col-12 col-md-3"><label asp-for="Exercises[i].Notes" class="form-label">Notes</label><textarea asp-for="Exercises[i].Notes" class="form-control" rows="1" maxlength="500"></textarea></div></div>
         </fieldset>
     }
     <button type="submit" class="btn btn-primary">Save completed workout</button>
-    <a asp-action="Details" asp-route-id="@Model.PlanId">Cancel</a>
+    <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.PlanId">Cancel</a>
 </form>
+}

@@ -19,17 +19,24 @@ public sealed class HomeController(AppDbContext db) : Controller
         if (profile is null || !profile.SetupCompleted) return RedirectToAction("Setup", "UserProfiles");
         var today = DateTime.Today;
         var startOfWeek = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
-        var logs = await db.WorkoutLogs.AsNoTracking().Where(item => item.UserProfileId == profile.Id).OrderByDescending(item => item.CompletedAt).ToListAsync(cancellationToken);
+        var recentLogs = await db.WorkoutLogs.AsNoTracking().Where(item => item.UserProfileId == profile.Id)
+            .OrderByDescending(item => item.CompletedAt).Take(8).ToListAsync(cancellationToken);
         var activePlan = await db.WorkoutPlans.AsNoTracking().Include(item => item.PlanExercises)
             .Where(item => item.UserProfileId == profile.Id && item.IsActive).OrderByDescending(item => item.CreatedAt).FirstOrDefaultAsync(cancellationToken);
-        var weekLogs = logs.Where(item => item.CompletedAt.ToLocalTime().Date >= startOfWeek).ToList();
-        var activeDays = logs.Where(item => item.CompletedAt.ToLocalTime().Year == today.Year && item.CompletedAt.ToLocalTime().Month == today.Month)
-            .Select(item => item.CompletedAt.ToLocalTime().Date).Distinct().Count();
+        var startOfMonth = new DateTime(today.Year, today.Month, 1);
+        var startOfNextMonth = startOfMonth.AddMonths(1);
+        var weekLogs = await db.WorkoutLogs.AsNoTracking().Where(item => item.UserProfileId == profile.Id
+            && item.CompletedAt >= startOfWeek.ToUniversalTime() && item.CompletedAt < today.AddDays(1).ToUniversalTime())
+            .Select(item => new { item.WorkoutSessionId, item.CompletedAt }).ToListAsync(cancellationToken);
+        var monthDates = await db.WorkoutLogs.AsNoTracking().Where(item => item.UserProfileId == profile.Id
+            && item.CompletedAt >= startOfMonth.ToUniversalTime() && item.CompletedAt < startOfNextMonth.ToUniversalTime())
+            .Select(item => item.CompletedAt).ToListAsync(cancellationToken);
+        var activeDays = monthDates.Select(item => item.ToLocalTime().Date).Distinct().Count();
         return View(new DashboardViewModel
         {
             Profile = profile,
             ActivePlan = activePlan,
-            RecentWorkouts = logs.Take(8).ToList(),
+            RecentWorkouts = recentLogs,
             CompletedWorkoutsThisWeek = weekLogs.Select(item => string.IsNullOrWhiteSpace(item.WorkoutSessionId) ? item.CompletedAt.ToLocalTime().ToString("yyyy-MM-dd") : item.WorkoutSessionId).Distinct().Count(),
             ActiveDaysThisMonth = activeDays
         });

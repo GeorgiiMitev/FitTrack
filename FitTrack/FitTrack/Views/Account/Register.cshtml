@@ -1,17 +1,17 @@
 @model FitTrack.Models.RegisterViewModel
-@{ ViewData["Title"] = "Регистрация"; }
+@{ ViewData["Title"] = "Create your account"; }
 <div class="account-page">
-    <section class="account-card">
-        <h1>Регистрация</h1>
-        <form asp-action="Register" method="post">
+    <section class="account-card border-0 shadow-lg">
+        <div class="text-center mb-4"><span class="badge text-bg-primary rounded-pill mb-2">FITTRACK</span><h1 class="h2 mb-2">Create your account</h1><p class="text-secondary mb-0">Start building a routine that fits you.</p></div>
+        <form asp-action="Register" method="post" data-loading data-loading-label="Creating account…">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-            <div class="mb-3"><label asp-for="UserName" class="form-label">Потребителско име</label><input asp-for="UserName" class="form-control" autocomplete="username" /><span asp-validation-for="UserName" class="text-danger"></span></div>
-            <div class="mb-3"><label asp-for="Email" class="form-label">Имейл</label><input asp-for="Email" class="form-control" autocomplete="email" /><span asp-validation-for="Email" class="text-danger"></span></div>
-            <div class="mb-3"><label asp-for="Password" class="form-label">Парола</label><input asp-for="Password" class="form-control" autocomplete="new-password" /><span asp-validation-for="Password" class="text-danger"></span></div>
-            <div class="mb-3"><label asp-for="ConfirmPassword" class="form-label">Потвърди паролата</label><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="text-danger"></span></div>
-            <button type="submit" class="btn btn-primary w-100">Създай акаунт</button>
+            <div class="mb-3"><label asp-for="UserName" class="form-label">Username</label><input asp-for="UserName" class="form-control form-control-lg" autocomplete="username" placeholder="Choose a username" /><span asp-validation-for="UserName" class="text-danger small"></span></div>
+            <div class="mb-3"><label asp-for="Email" class="form-label">Email address</label><input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="you@example.com" /><span asp-validation-for="Email" class="text-danger small"></span></div>
+            <div class="mb-3"><label asp-for="Password" class="form-label">Password</label><input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" /><span asp-validation-for="Password" class="text-danger small"></span></div>
+            <div class="mb-4"><label asp-for="ConfirmPassword" class="form-label">Confirm password</label><input asp-for="ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="text-danger small"></span></div>
+            <button type="submit" class="btn btn-primary btn-lg w-100">Create account</button>
         </form>
-        <p class="text-center mt-3 mb-0">Вече имаш акаунт? <a asp-action="Login">Вход</a></p>
+        <p class="text-center mt-4 mb-0">Already have an account? <a asp-action="Login">Log in</a></p>
     </section>
 </div>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

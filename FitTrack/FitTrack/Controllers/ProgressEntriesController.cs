@@ -12,17 +12,19 @@ public sealed class ProgressEntriesController(AppDbContext db) : Controller
     public IActionResult Index() => RedirectToAction("Index", "Progress");
 
     [HttpGet]
-    public IActionResult Create() => View(new ProgressEntry { Date = DateOnly.FromDateTime(DateTime.Today) });
+    public IActionResult Create() => View(new ProgressEntry { Date = DateOnly.FromDateTime(DateTime.Today), ExerciseName = string.Empty });
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("MaxWeight,Date")] ProgressEntry entry, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create([Bind("ExerciseName,MaxWeight,Date")] ProgressEntry entry, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
         if (!ModelState.IsValid) return View(entry);
         entry.UserProfileId = profile.Id;
+        entry.ExerciseName = entry.ExerciseName.Trim();
         db.ProgressEntries.Add(entry);
         await db.SaveChangesAsync(cancellationToken);
+        TempData["ProgressEntrySaved"] = "Progress measurement saved.";
         return RedirectToAction("Index", "Progress");
     }
 
@@ -36,7 +38,7 @@ public sealed class ProgressEntriesController(AppDbContext db) : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,MaxWeight,Date")] ProgressEntry input, CancellationToken cancellationToken)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,ExerciseName,MaxWeight,Date")] ProgressEntry input, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
@@ -45,8 +47,10 @@ public sealed class ProgressEntriesController(AppDbContext db) : Controller
         if (entry is null) return NotFound();
         if (!ModelState.IsValid) return View(input);
         entry.MaxWeight = input.MaxWeight;
+        entry.ExerciseName = input.ExerciseName.Trim();
         entry.Date = input.Date;
         await db.SaveChangesAsync(cancellationToken);
+        TempData["ProgressEntrySaved"] = "Progress measurement updated.";
         return RedirectToAction("Index", "Progress");
     }
 
@@ -59,6 +63,7 @@ public sealed class ProgressEntriesController(AppDbContext db) : Controller
         if (entry is null) return NotFound();
         db.ProgressEntries.Remove(entry);
         await db.SaveChangesAsync(cancellationToken);
+        TempData["ProgressEntrySaved"] = "Progress measurement removed.";
         return RedirectToAction("Index", "Progress");
     }
 

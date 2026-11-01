@@ -10,12 +10,19 @@ namespace FitTrack.Controllers;
 public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService exercises, IWorkoutPlanService plans) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(string? search, string? status, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
-        var items = await db.WorkoutPlans.AsNoTracking().Include(plan => plan.PlanExercises)
-            .Where(plan => plan.UserProfileId == profile.Id).OrderByDescending(plan => plan.CreatedAt).ToListAsync(cancellationToken);
+        var query = db.WorkoutPlans.AsNoTracking().Include(plan => plan.PlanExercises)
+            .Where(plan => plan.UserProfileId == profile.Id);
+        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(plan => plan.Name.Contains(search) || plan.Goal.Contains(search));
+        status = status is "active" or "saved" ? status : "all";
+        if (status == "active") query = query.Where(plan => plan.IsActive);
+        if (status == "saved") query = query.Where(plan => !plan.IsActive);
+        var items = await query.OrderByDescending(plan => plan.IsActive).ThenByDescending(plan => plan.CreatedAt).ToListAsync(cancellationToken);
+        ViewBag.Search = search;
+        ViewBag.Status = status;
         ViewBag.ApiNotice = TempData["PlanError"] as string;
         return View(items);
     }
@@ -40,8 +47,8 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
         if (!string.IsNullOrWhiteSpace(search)) suitable = suitable.Where(item => item.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
         var model = new ManualPlanViewModel
         {
-            Goal = profile.Goal,
-            AvailableExercises = suitable.OrderBy(item => item.Name).Take(300).ToList(),
+            Goal = profile.Goal, Search = search,
+            AvailableExercises = suitable.OrderBy(item => item.Name).Take(100).ToList(),
             Error = catalog.Error
         };
         return View(model);
@@ -60,7 +67,8 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
             model.Error = result.Error;
         }
         model.AvailableExercises = catalog.Exercises.Where(item => WorkoutPlanService.IsEquipmentAvailable(item, profile.Equipment))
-            .OrderBy(item => item.Name).Take(300).ToList();
+            .Where(item => string.IsNullOrWhiteSpace(model.Search) || item.Name.Contains(model.Search, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => item.Name).Take(100).ToList();
         if (!string.IsNullOrWhiteSpace(catalog.Error)) model.Error ??= catalog.Error;
         return View(model);
     }
@@ -96,14 +104,19 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
     }
 
     [HttpGet]
-    public async Task<IActionResult> Complete(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Complete(int id, DayOfWeek? weekday, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
         var plan = await db.WorkoutPlans.AsNoTracking().Include(item => item.PlanExercises)
             .FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id && item.IsActive, cancellationToken);
         if (plan is null) return NotFound("Activate your own plan before logging a workout.");
-        return View(ToCompletionModel(plan));
+        var today = DateTime.Today.DayOfWeek;
+        var selectedWeekday = weekday is not null && plan.PlanExercises.Any(item => item.DayOfTheWeek == (byte)weekday)
+            ? weekday
+            : plan.PlanExercises.Any(item => item.DayOfTheWeek == (byte)today) ? today
+            : plan.PlanExercises.OrderBy(item => item.DayOfTheWeek).Select(item => (DayOfWeek?)item.DayOfTheWeek).FirstOrDefault();
+        return View(ToCompletionModel(plan, selectedWeekday));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -114,18 +127,24 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
         var plan = await db.WorkoutPlans.Include(item => item.PlanExercises)
             .FirstOrDefaultAsync(item => item.Id == model.PlanId && item.UserProfileId == profile.Id && item.IsActive, cancellationToken);
         if (plan is null) return NotFound();
-        var allowed = plan.PlanExercises.ToDictionary(item => item.Id);
+        var planWeekdays = plan.PlanExercises.Select(item => item.DayOfTheWeek).Distinct().ToList();
+        if (model.SelectedWeekday is null || !planWeekdays.Contains((byte)model.SelectedWeekday.Value))
+            ModelState.AddModelError(nameof(model.SelectedWeekday), "Choose a training day from this plan.");
+        var allowed = plan.PlanExercises.Where(item => model.SelectedWeekday is not null && item.DayOfTheWeek == (byte)model.SelectedWeekday.Value)
+            .ToDictionary(item => item.Id);
         var selected = model.Exercises.Where(item => item.Completed).ToList();
         if (selected.Count == 0) ModelState.AddModelError(string.Empty, "Mark at least one exercise complete to save the workout.");
         if (selected.GroupBy(item => item.PlanExerciseId).Any(group => group.Count() > 1)
-            || selected.Any(item => !allowed.ContainsKey(item.PlanExerciseId) || item.SetsCompleted is < 1 or > 20 || item.RepetitionsCompleted is < 1 or > 100 || item.WeightUsed < 0))
+            || selected.Any(item => !allowed.ContainsKey(item.PlanExerciseId) || item.SetsCompleted is < 1 or > 20 || item.RepetitionsCompleted is < 1 or > 100
+                || item.WeightUsed is < 0 or > 1000 || (item.Notes?.Length ?? 0) > 500))
             ModelState.AddModelError(string.Empty, "Exercise details were invalid. Check completed sets, reps, and weight.");
         if (!ModelState.IsValid)
         {
             model.PlanName = plan.Name;
+            model.PlanWeekdays = planWeekdays.Select(day => (DayOfWeek)day).ToList();
             foreach (var item in model.Exercises)
                 if (allowed.TryGetValue(item.PlanExerciseId, out var prescribed)) { item.ExerciseName = prescribed.ExerciseName; item.PrescribedSets = prescribed.Sets; item.PrescribedRepetitions = prescribed.Repetitions; }
-            return View(model);
+        return View(model);
         }
         var sessionId = Guid.NewGuid().ToString("N");
         var completedAt = DateTime.UtcNow;
@@ -162,11 +181,13 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
         return db.UserProfiles.FirstOrDefaultAsync(profile => profile.IdentityUserId == userId, cancellationToken);
     }
 
-    private static WorkoutCompletionViewModel ToCompletionModel(WorkoutPlan plan) => new()
+    private static WorkoutCompletionViewModel ToCompletionModel(WorkoutPlan plan, DayOfWeek? weekday) => new()
     {
         PlanId = plan.Id,
         PlanName = plan.Name,
-        Exercises = plan.PlanExercises.OrderBy(item => item.DayOfTheWeek).ThenBy(item => item.Id).Select(item => new WorkoutCompletionExercise
+        SelectedWeekday = weekday,
+        PlanWeekdays = plan.PlanExercises.Select(item => item.DayOfTheWeek).Distinct().Order().Select(day => (DayOfWeek)day).ToList(),
+        Exercises = plan.PlanExercises.Where(item => weekday is null || item.DayOfTheWeek == (byte)weekday.Value).OrderBy(item => item.Id).Select(item => new WorkoutCompletionExercise
         {
             PlanExerciseId = item.Id, ExerciseName = item.ExerciseName, PrescribedSets = item.Sets,
             PrescribedRepetitions = item.Repetitions, SetsCompleted = item.Sets, RepetitionsCompleted = item.Repetitions

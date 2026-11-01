@@ -1,20 +1,48 @@
-@model IEnumerable<FitTrack.Models.WorkoutPlan>
-@{ ViewData["Title"] = "Workout plans"; }
-<h1>Workout plans</h1>
-@if (ViewBag.ApiNotice is string notice) { <p class="text-warning" role="status">@notice</p> }
-<p>
-    <a class="btn btn-primary" asp-action="Manual">Create a manual plan</a>
-    <a class="btn btn-secondary" asp-controller="ExerciseLibrary" asp-action="Index">Browse exercises</a>
-</p>
-<form asp-action="GenerateAi" method="post"><button class="btn btn-success" type="submit">Generate a personalized AI plan</button></form>
-@if (!Model.Any()) { <p>No saved plans yet. Create one manually or generate an AI plan.</p> }
-<table class="table mt-3">
-    <thead><tr><th>Name</th><th>Goal</th><th>Source</th><th>Created</th><th>Exercises</th><th>Status</th><th></th></tr></thead>
-    <tbody>@foreach (var plan in Model)
+@model IReadOnlyCollection<FitTrack.Models.WorkoutPlan>
+@{ ViewData["Title"] = "Workout plans"; var search = ViewBag.Search as string ?? string.Empty; var status = ViewBag.Status as string ?? "all"; }
+<header class="page-header">
+    <div class="page-header-copy"><span class="eyebrow">BUILD YOUR ROUTINE</span><h1>Workout plans</h1><p>Plans shaped around your goals, training days, and available equipment.</p></div>
+    <div class="page-actions"><a class="btn btn-primary" asp-action="Manual">Create a plan</a></div>
+</header>
+@if (ViewBag.ApiNotice is string notice) { <div class="alert alert-warning" role="status">@notice</div> }
+
+<section class="app-card mb-4" aria-labelledby="plan-builder-heading">
+    <div class="plan-builder-row"><div><span class="eyebrow">A QUICK START</span><h2 id="plan-builder-heading" class="h5 mb-1">Need a starting point?</h2><p class="text-secondary mb-0">Generate a draft using your profile and matching exercises. You can review it before activating it.</p></div>
+        <form asp-action="GenerateAi" method="post" data-loading data-loading-label="Building your plan…"><button class="btn btn-outline-primary" type="submit">Generate an AI plan</button></form>
+    </div>
+</section>
+
+<section aria-labelledby="saved-plans-heading">
+    <div class="section-heading mt-0"><div><h2 id="saved-plans-heading">Your saved plans</h2><p>@Model.Count plan@(Model.Count == 1 ? "" : "s")</p></div></div>
+    <form asp-action="Index" method="get" class="plan-filters app-card mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-6"><label class="form-label" for="search">Search plans</label><input class="form-control" id="search" name="search" value="@search" placeholder="Plan name or goal" /></div>
+            <div class="col-8 col-md-3"><label class="form-label" for="status">Show</label><select class="form-select" id="status" name="status"><option value="all" selected="@(status == "all" ? "selected" : null)">All plans</option><option value="active" selected="@(status == "active" ? "selected" : null)">Active</option><option value="saved" selected="@(status == "saved" ? "selected" : null)">Saved</option></select></div>
+            <div class="col-4 col-md-3 d-flex gap-2"><button class="btn btn-primary flex-grow-1" type="submit">Filter</button><a class="btn btn-light" asp-action="Index">Clear</a></div>
+        </div>
+    </form>
+    @if (!Model.Any())
     {
-        <tr><td><a asp-action="Details" asp-route-id="@plan.Id">@plan.Name</a></td><td>@plan.Goal</td><td>@(plan.IsAiGenerated ? "AI" : "Manual")</td><td>@plan.CreatedAt.ToLocalTime().ToShortDateString()</td><td>@plan.PlanExercises.Count</td><td>@(plan.IsActive ? "Active" : "Saved")</td><td>
-            @if (!plan.IsActive) { <form asp-action="Activate" asp-route-id="@plan.Id" method="post" class="d-inline"><button type="submit">Activate</button></form> }
-            <form asp-action="Delete" asp-route-id="@plan.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this plan?')"><button type="submit">Delete</button></form>
-        </td></tr>
-    }</tbody>
-</table>
+        <div class="empty-state"><div class="empty-state-mark" aria-hidden="true">▤</div><h3>@(string.IsNullOrWhiteSpace(search) && status == "all" ? "Your first plan is a few steps away" : "No plans match these filters")</h3><p>@(string.IsNullOrWhiteSpace(search) && status == "all" ? "Create a manual plan or generate a draft, then activate the one you want to follow." : "Try a different name or show all plans.")</p>@if (string.IsNullOrWhiteSpace(search) && status == "all") { <a class="btn btn-primary" asp-action="Manual">Create a plan</a> } else { <a class="btn btn-outline-primary" asp-action="Index">Clear filters</a> }</div>
+    }
+    else
+    {
+        <div class="row g-3">
+        @foreach (var plan in Model)
+        {
+            <div class="col-12 col-lg-6"><article class="plan-card h-100 @(plan.IsActive ? "plan-card-active" : string.Empty)">
+                <div class="d-flex justify-content-between align-items-start gap-3"><div><span class="badge-soft @(plan.IsActive ? "badge-success-soft" : "badge-muted")">@(plan.IsActive ? "Active plan" : "Saved plan")</span><span class="badge-soft ms-1">@(plan.IsAiGenerated ? "AI draft" : "Manual")</span></div><span class="plan-exercise-count">@plan.PlanExercises.Count <small>exercises</small></span></div>
+                <h3 class="h4 mt-3 mb-1"><a class="plan-title-link" asp-action="Details" asp-route-id="@plan.Id">@plan.Name</a></h3>
+                <p class="text-secondary mb-3">@plan.Goal</p>
+                <div class="plan-meta"><span>Created @plan.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</span><span>@plan.PlanExercises.Select(item => item.DayOfTheWeek).Distinct().Count() training days</span></div>
+                <div class="plan-card-actions mt-3">
+                    @if (plan.IsActive) { <a class="btn btn-primary btn-sm" asp-action="Complete" asp-route-id="@plan.Id">Log a workout</a> }
+                    else { <form asp-action="Activate" asp-route-id="@plan.Id" method="post" data-loading data-loading-label="Activating…"><button class="btn btn-outline-primary btn-sm" type="submit">Activate plan</button></form> }
+                    <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@plan.Id">View details</a>
+                    <form asp-action="Delete" asp-route-id="@plan.Id" method="post" data-confirm="Delete ‘@plan.Name’? This won’t remove workout history." class="ms-auto"><button class="btn btn-link btn-sm text-danger text-decoration-none" type="submit">Delete</button></form>
+                </div>
+            </article></div>
+        }
+        </div>
+    }
+</section>

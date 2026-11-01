@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using FitTrack.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using FitTrack.Services;
 using System.IO;
@@ -22,6 +23,16 @@ if (File.Exists(envFile))
     }
 }
 var builder = WebApplication.CreateBuilder(args);
+
+var dataProtectionDirectory = builder.Configuration["DataProtection:KeysDirectory"];
+if (!string.IsNullOrWhiteSpace(dataProtectionDirectory))
+{
+    var fullDataProtectionDirectory = Path.GetFullPath(dataProtectionDirectory);
+    Directory.CreateDirectory(fullDataProtectionDirectory);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(fullDataProtectionDirectory))
+        .SetApplicationName("FitTrack");
+}
 
 var connectionString = builder.Configuration.GetConnectionString("AppDbContext") ?? throw new InvalidOperationException("Connection string 'AppDbContext' not found.");
 
@@ -75,7 +86,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
+app.MapStaticAssets().AllowAnonymous();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}").WithStaticAssets();
 

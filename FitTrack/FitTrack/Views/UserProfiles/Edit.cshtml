@@ -1,8 +1,6 @@
 @model FitTrack.Models.ProfileEditViewModel
-@{ ViewData["Title"] = "Edit profile"; ViewData["FormAction"] = "Edit"; ViewData["SubmitLabel"] = "Save changes"; }
-<h1>Edit profile</h1>
-<img src="@(Model.CurrentPhotoPath ?? "/images/default-profile.svg")" alt="Profile photo" width="128" height="128" />
-<partial name="_ProfileForm" model="Model" />
-<a asp-action="Index">Cancel</a>
+@{ ViewData["Title"] = "Edit profile"; ViewData["FormAction"] = "Edit"; ViewData["SubmitLabel"] = "Save profile"; }
+<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-action="Index">← My profile</a><h1 class="mt-3">Edit your profile</h1><p>These preferences help shape exercise suggestions and training plans.</p></div></header>
+<section class="app-card profile-form-card"><partial name="_ProfileForm" model="Model" /></section>
 @section Styles { <link rel="stylesheet" href="~/css/profile-equipment.css" asp-append-version="true" /> }
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

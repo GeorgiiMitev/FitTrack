@@ -21,7 +21,10 @@ public interface IAITrainingService
 
 public sealed class AITrainingService(AppDbContext db, IHttpClientFactory clients, IConfiguration configuration, ILogger<AITrainingService> logger) : IAITrainingService
 {
-    private const string SafetyInstructions = "You are FitTrack's fitness coach. Be practical and concise. Give general training guidance, not medical advice. Do not diagnose. If pain or injury is reported, advise stopping the painful movement and consulting a qualified health professional.";
+    private const string SafetyInstructions = "You are FitTrack's fitness coach." +
+        " Be practical and concise. Give general training guidance, not medical advice." +
+        " Do not diagnose. If pain or injury is reported, advise stopping the painful" +
+        " movement and consulting a qualified health professional.";
 
     public Task<AiTrainingResult> GetAdviceAsync(string userId, string? question, CancellationToken cancellationToken = default) =>
         GetTextAsync(userId, SafetyInstructions, string.IsNullOrWhiteSpace(question)
@@ -78,17 +81,40 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
                 if (useGemini && response.StatusCode == HttpStatusCode.ServiceUnavailable)
                     return new(null, "Gemini is temporarily busy or unavailable after retries. Try again later.");
                 if ((int)response.StatusCode == 429)
-                    return new(null, useGemini ? "Gemini usage or rate limit reached. Check AI Studio's quota and model access." : "OpenAI API usage or rate limit reached. Check the API project's usage and billing limits.");
+                {
+                    if (useGemini)
+                        return new(null, "Gemini usage or rate limit reached. Check AI Studio's quota and model access, then wait briefly before retrying.");
+
+                    var normalizedCode = code?.ToLowerInvariant();
+                    if (normalizedCode is "insufficient_quota" or "credit_balance_exhausted" or "organization_usage_limit_exceeded"
+                        or "organization_spend_limit_exceeded" or "project_spend_limit_exceeded")
+                        return new(null, "OpenAI has no available quota for this project. Check API billing or credit balance and the organization and project usage limits. ChatGPT subscription billing is separate.");
+
+                    if (normalizedCode is "rate_limit_exceeded" or "requests" or "tokens")
+                        return new(null, "OpenAI's temporary request or token rate limit was reached. Wait briefly before retrying and check this model's RPM and TPM limits if it continues.");
+
+                    return new(null, "OpenAI returned a 429 usage limit response. Check API billing, credit balance, project usage limits, and rate limits. See the app output for the provider error code.");
+                }
                 return new(null, $"{provider} could not complete this request (HTTP {(int)response.StatusCode}). Saved plans and workout history are unaffected.");
             }
             using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
             var text = useGemini ? ReadChatCompletion(document.RootElement) : ReadResponsesText(document.RootElement);
             return string.IsNullOrWhiteSpace(text) ? new(null, $"{provider} returned an empty answer. Try again.") : new(text, null);
         }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is (HttpRequestException or TaskCanceledException or JsonException))
+        catch (HttpRequestException ex) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogWarning(ex, "{Provider} training request failed.", provider);
-            return new(null, $"Could not connect to {provider}. Check the internet connection and try again.");
+            return new(null, $"FitTrack could not reach {provider}. Check that the app server can connect to the provider API and try again.");
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "{Provider} training request timed out.", provider);
+            return new(null, $"The {provider} request timed out. Check the connection and try again.");
+        }
+        catch (JsonException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "{Provider} returned an unreadable training response.", provider);
+            return new(null, $"{provider} returned an unreadable response. Check the model setting and try again.");
         }
     }
 
@@ -132,8 +158,13 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
         {
             using var document = JsonDocument.Parse(body);
             if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object) return null;
+            if (error.TryGetProperty("code", out var code))
+            {
+                if (code.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(code.GetString())) return code.GetString();
+                if (code.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined)) return code.ToString();
+            }
+            if (error.TryGetProperty("type", out var type) && type.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(type.GetString())) return type.GetString();
             if (error.TryGetProperty("status", out var status) && status.ValueKind == JsonValueKind.String) return status.GetString();
-            if (error.TryGetProperty("code", out var code)) return code.ValueKind == JsonValueKind.String ? code.GetString() : code.ToString();
             return null;
         }
         catch (JsonException) { return null; }

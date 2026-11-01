@@ -1,32 +1,48 @@
 @model FitTrack.Models.ExerciseLibraryViewModel
 @{ ViewData["Title"] = "Exercise library"; }
-<h1>Exercise library</h1>
-@if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="text-warning" role="status">@Model.Error</p> }
-@if (Model.UsingCachedData) { <p>Showing the cached wger catalog.</p> }
-<form method="get" asp-action="Index" class="mb-3">
-    <label for="search">Name</label><input id="search" name="search" value="@Model.Search" />
-    <label for="muscle">Muscle</label><select id="muscle" name="muscle"><option value="">All</option>@foreach (var value in Model.Muscles) { <option selected="@(Model.Muscle == value ? "selected" : null)" value="@value">@value</option> }</select>
-    <label for="category">Category</label><select id="category" name="category"><option value="">All</option>@foreach (var value in Model.Categories) { <option selected="@(Model.Category == value ? "selected" : null)" value="@value">@value</option> }</select>
-    <label for="equipment">Equipment</label><select id="equipment" name="equipment"><option value="">All</option>@foreach (var value in Model.EquipmentOptions) { <option selected="@(Model.Equipment == value ? "selected" : null)" value="@value">@value</option> }</select>
-    <button type="submit">Search</button>
+<header class="page-header">
+    <div class="page-header-copy"><span class="eyebrow">MOVE WITH INTENTION</span><h1>Exercise library</h1><p>Explore movements by name, muscle group, category, or equipment.</p></div>
+    <div class="page-actions"><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Manual">Build a plan</a></div>
+</header>
+@if (!string.IsNullOrWhiteSpace(Model.Error)) { <div class="alert alert-warning" role="status">@Model.Error</div> }
+@if (Model.UsingCachedData) { <p class="catalog-note"><span class="catalog-note-dot" aria-hidden="true"></span> Showing a saved copy of the exercise catalog.</p> }
+<form method="get" asp-action="Index" class="app-card exercise-filters mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-6 col-xl-3"><label for="search" class="form-label">Exercise name</label><input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Try ‘row’ or ‘squat’" /></div>
+        <div class="col-12 col-sm-4 col-xl-2"><label for="muscle" class="form-label">Muscle</label><select id="muscle" name="muscle" class="form-select"><option value="">All muscles</option>@foreach (var value in Model.Muscles) { <option selected="@(Model.Muscle == value ? "selected" : null)" value="@value">@value</option> }</select></div>
+        <div class="col-12 col-sm-4 col-xl-2"><label for="category" class="form-label">Category</label><select id="category" name="category" class="form-select"><option value="">All categories</option>@foreach (var value in Model.Categories) { <option selected="@(Model.Category == value ? "selected" : null)" value="@value">@value</option> }</select></div>
+        <div class="col-12 col-sm-4 col-xl-3"><label for="equipment" class="form-label">Equipment</label><select id="equipment" name="equipment" class="form-select"><option value="">Any equipment</option>@foreach (var value in Model.EquipmentOptions) { <option selected="@(Model.Equipment == value ? "selected" : null)" value="@value">@value</option> }</select></div>
+        <div class="col-12 col-xl-2 d-flex gap-2"><button class="btn btn-primary flex-grow-1" type="submit">Apply filters</button><a class="btn btn-light" asp-action="Index">Clear</a></div>
+    </div>
 </form>
-<p>@Model.Exercises.Count exercises returned. <a asp-controller="WorkoutPlans" asp-action="Manual">Create a manual plan from library exercises</a></p>
-@if (Model.Exercises.Count == 0) { <p>No exercises match these filters.</p> }
-<div class="row">
-@foreach (var item in Model.Exercises)
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3"><p class="small text-secondary mb-0">@Model.TotalItems exercise@(Model.TotalItems == 1 ? "" : "s") found</p><p class="small text-secondary mb-0">Page @Model.Page of @Model.PageCount</p></div>
+@if (Model.Exercises.Count == 0)
 {
-    <article class="col-md-6 mb-3">
-        <div class="card h-100">
-            @if (!string.IsNullOrWhiteSpace(item.ImageThumbnailUrl ?? item.ImageUrl)) { <img class="card-img-top" src="@(item.ImageThumbnailUrl ?? item.ImageUrl)" alt="@item.Name" loading="lazy" /> }
-            <div class="card-body">
-                <h2 class="h5">@item.Name</h2>
-                <p><strong>Category:</strong> @(item.Category.Length == 0 ? "Not supplied" : item.Category)</p>
-                <p><strong>Muscles:</strong> @(item.Muscles.Count == 0 ? "Not supplied" : string.Join(", ", item.Muscles))</p>
-                <p><strong>Equipment:</strong> @(item.Equipment.Count == 0 ? "No equipment metadata" : string.Join(", ", item.Equipment))</p>
-                @if (!string.IsNullOrWhiteSpace(item.Description)) { <details><summary>Instructions</summary><div>@Html.Raw(System.Net.WebUtility.HtmlEncode(item.Description).Replace("\n", "<br />"))</div></details> }
-                <small>Exercise data from <a href="https://wger.de" rel="noopener noreferrer">wger</a>. @if (!string.IsNullOrWhiteSpace(item.LicenseAuthor)) { <span>Image attribution: @item.LicenseAuthor. </span> } @if (!string.IsNullOrWhiteSpace(item.LicenseTitle)) { <span>@item.LicenseTitle. </span> } @if (!string.IsNullOrWhiteSpace(item.LicenseUrl)) { <a href="@item.LicenseUrl" rel="noopener noreferrer">License/source</a> }</small>
-            </div>
-        </div>
-    </article>
+    <div class="empty-state"><div class="empty-state-mark" aria-hidden="true">⌕</div><h2>No exercises match those filters</h2><p>Try a different search or clear one of the filters.</p><a class="btn btn-outline-primary" asp-action="Index">Clear filters</a></div>
 }
-</div>
+else
+{
+    <div class="row g-3">
+    @foreach (var item in Model.Exercises)
+    {
+        <article class="col-12 col-md-6 col-xl-4"><div class="exercise-card h-100">
+            @if (!string.IsNullOrWhiteSpace(item.ImageThumbnailUrl ?? item.ImageUrl)) { <img class="exercise-image" src="@(item.ImageThumbnailUrl ?? item.ImageUrl)" alt="Demonstration of @item.Name" loading="lazy" /> }
+            else { <div class="exercise-image exercise-image-empty" aria-hidden="true"><span>FT</span></div> }
+            <div class="exercise-card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2"><h2 class="h5 mb-2">@item.Name</h2>@if (!string.IsNullOrEmpty(item.Category)) { <span class="badge-soft">@item.Category</span> }</div>
+                <dl class="exercise-meta"><dt>Muscles</dt><dd>@(item.Muscles.Count == 0 ? "Not specified" : string.Join(", ", item.Muscles))</dd><dt>Equipment</dt><dd>@(item.Equipment.Count == 0 ? "Not specified" : string.Join(", ", item.Equipment))</dd></dl>
+                @if (!string.IsNullOrWhiteSpace(item.Description)) { <details class="exercise-instructions"><summary>View instructions</summary><div class="exercise-description">@item.Description</div></details> }
+                <div class="exercise-attribution">Catalog data from <a href="https://wger.de" target="_blank" rel="noopener noreferrer">wger</a>. @if (!string.IsNullOrWhiteSpace(item.LicenseAuthor)) { <span>Image by @item.LicenseAuthor. </span> } @if (!string.IsNullOrWhiteSpace(item.LicenseTitle)) { <span>@item.LicenseTitle. </span> } @if (!string.IsNullOrWhiteSpace(item.LicenseUrl)) { <a href="@item.LicenseUrl" target="_blank" rel="noopener noreferrer">Source</a> }</div>
+            </div>
+        </div></article>
+    }
+    </div>
+    @if (Model.PageCount > 1)
+    {
+        <nav class="mt-4" aria-label="Exercise library pages"><ul class="pagination justify-content-center">
+            <li class="page-item @(Model.Page == 1 ? "disabled" : "")"><a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-muscle="@Model.Muscle" asp-route-category="@Model.Category" asp-route-equipment="@Model.Equipment" asp-route-page="@(Model.Page - 1)" aria-label="Previous page">Previous</a></li>
+            <li class="page-item disabled"><span class="page-link">Page @Model.Page of @Model.PageCount</span></li>
+            <li class="page-item @(Model.Page == Model.PageCount ? "disabled" : "")"><a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-muscle="@Model.Muscle" asp-route-category="@Model.Category" asp-route-equipment="@Model.Equipment" asp-route-page="@(Model.Page + 1)" aria-label="Next page">Next</a></li>
+        </ul></nav>
+    }
+}

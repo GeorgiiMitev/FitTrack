@@ -125,6 +125,11 @@ namespace FitTrack.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ExerciseName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("MaxWeight")
                         .HasColumnType("TEXT");
 

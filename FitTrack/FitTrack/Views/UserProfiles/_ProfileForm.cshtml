@@ -1,0 +1,63 @@
+@model FitTrack.Models.ProfileEditViewModel
+@{ var formAction = ViewData["FormAction"] as string ?? "Edit"; var submitLabel = ViewData["SubmitLabel"] as string ?? "Save"; }
+@{ var equipmentGroups = (IReadOnlyDictionary<string, string[]>)ViewBag.EquipmentGroups; }
+<form asp-action="@formAction" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">Name</label>
+        <input asp-for="Name" class="form-control" autocomplete="name" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Goal" class="form-label">Fitness goal</label>
+        <select asp-for="Goal" class="form-select">
+            @foreach (string goal in ViewBag.Goals) { <option value="@goal">@goal</option> }
+        </select>
+        <span asp-validation-for="Goal" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ExperienceLevel" class="form-label">Experience level</label>
+        <select asp-for="ExperienceLevel" asp-items="Html.GetEnumSelectList<FitTrack.Models.FitnessExperienceLevel>()" class="form-select"></select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="SessionDurationMinutes" class="form-label">Preferred session duration (minutes)</label>
+        <input asp-for="SessionDurationMinutes" class="form-control" type="number" min="15" max="240" />
+        <span asp-validation-for="SessionDurationMinutes" class="text-danger"></span>
+    </div>
+    <fieldset class="mb-3">
+        <legend>Preferred training days</legend>
+        @foreach (string day in ViewBag.Weekdays)
+        {
+            <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="PreferredTrainingDays" value="@day" checked="@(Model.PreferredTrainingDays.Contains(day) ? "checked" : null)" /> @day</label>
+        }
+        <span asp-validation-for="PreferredTrainingDays" class="text-danger d-block"></span>
+    </fieldset>
+    <fieldset class="mb-3">
+        <legend>Available equipment</legend>
+        <p class="text-muted">Choose everything you can use. Select several options across categories.</p>
+        <div class="profile-equipment-groups">
+        @foreach (var group in equipmentGroups)
+        {
+            <section class="profile-equipment-group" aria-label="@group.Key">
+                <h3>@group.Key</h3>
+                <div class="profile-equipment-options">
+                @foreach (string equipment in group.Value)
+                {
+                    <label class="profile-equipment-option">
+                        <input type="checkbox" name="Equipment" value="@equipment" checked="@(Model.Equipment.Contains(equipment, StringComparer.OrdinalIgnoreCase) ? "checked" : null)" />
+                        <span>@equipment</span>
+                    </label>
+                }
+                </div>
+            </section>
+        }
+        </div>
+        <span asp-validation-for="Equipment" class="text-danger d-block"></span>
+    </fieldset>
+    <div class="mb-3">
+        <label asp-for="ProfilePhoto" class="form-label">Profile photo (JPG, PNG, or WebP; up to 5 MB)</label>
+        <input asp-for="ProfilePhoto" class="form-control" type="file" accept="image/jpeg,image/png,image/webp" />
+        <span asp-validation-for="ProfilePhoto" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">@submitLabel</button>
+</form>

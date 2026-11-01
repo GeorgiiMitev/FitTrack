@@ -1,151 +1,159 @@
-
+using System.Security.Claims;
+using FitTrack.Data;
+using FitTrack.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FitTrack.Models;
-using FitTrack.Data;
 
-public class UserProfilesController : Controller
+namespace FitTrack.Controllers;
+
+public sealed class UserProfilesController(AppDbContext db, IWebHostEnvironment environment) : Controller
 {
-    private readonly AppDbContext _context;
-    private readonly HttpClient _openAiClient;
-    public UserProfilesController(AppDbContext context, HttpClient openAiClient, IHttpClientFactory factory)
+    private static readonly string[] Goals = ["General fitness", "Muscle building", "Weight loss", "Strength", "Endurance", "Mobility"];
+    private static readonly string[] Weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    private static readonly IReadOnlyDictionary<string, string[]> EquipmentGroups = new Dictionary<string, string[]>
     {
-        _context = context;
-        _openAiClient = factory.CreateClient("OpenAI");
+        ["Free weights"] = ["Dumbbells", "Barbell", "EZ Curl Bar", "Kettlebells", "Weight Plates", "Medicine Ball", "Trap Bar"],
+        ["Machines"] = ["Smith Machine", "Cable Machine", "Leg Press Machine", "Lat Pulldown Machine", "Chest Press Machine", "Leg Extension Machine", "Leg Curl Machine", "Pec Deck Machine", "Assisted Pull-Up Machine"],
+        ["Bodyweight & resistance"] = ["Bodyweight", "Pull-Up Bar", "Dip Bars", "Parallel Bars", "Gymnastic Rings", "Push-Up Bars", "Resistance Bands", "Resistance Tubes", "Suspension Trainer", "Weighted Vest"],
+        ["Benches & racks"] = ["Flat Bench", "Adjustable Bench", "Squat Rack", "Power Rack", "Preacher Curl Bench"],
+        ["Cardio equipment"] = ["Treadmill", "Exercise Bike", "Rowing Machine", "Elliptical Machine"],
+        ["Accessories"] = ["Jump Rope", "Ab Wheel", "Exercise Mat", "Foam Roller"]
+    };
+    private static readonly string[] EquipmentOptions = EquipmentGroups.Values.SelectMany(items => items).ToArray();
+
+    [HttpGet]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    {
+        var profile = await GetProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (!profile.SetupCompleted) return RedirectToAction(nameof(Setup));
+        return View(ToViewModel(profile));
     }
 
-    // GET: USERPROFILES
-    public async Task<IActionResult> Index()    
+    [HttpGet]
+    public async Task<IActionResult> Setup(CancellationToken cancellationToken)
     {
-        return View(await _context.UserProfiles.ToListAsync());
+        var profile = await GetProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (profile.SetupCompleted) return RedirectToAction(nameof(Index));
+        PopulateChoices();
+        return View(ToViewModel(profile));
     }
 
-    // GET: USERPROFILES/Details/5
-    public async Task<IActionResult> Details(int? id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Setup(ProfileEditViewModel model, CancellationToken cancellationToken)
     {
-        if (id == null)
+        var profile = await GetProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (!ApplyValidatedProfile(model, profile))
         {
-            return NotFound();
+            PopulateChoices();
+            return View(model);
         }
-
-        var userprofile = await _context.UserProfiles
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (userprofile == null)
-        {
-            return NotFound();
-        }
-
-        return View(userprofile);
+        profile.SetupCompleted = true;
+        await SavePhotoAsync(model.ProfilePhoto, profile, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return RedirectToAction("Index", "Home");
     }
 
-    // GET: USERPROFILES/Create
-    public IActionResult Create()
+    [HttpGet]
+    public async Task<IActionResult> Edit(CancellationToken cancellationToken)
     {
-        return View();
+        var profile = await GetProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        PopulateChoices();
+        return View(ToViewModel(profile));
     }
 
-    // POST: USERPROFILES/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,Goal,TrainingDaysPerWeek,SessionDurationMinutes,Equipment,WorkoutPlans,WorkoutLogs,ProgressEntries")] UserProfile userprofile)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(ProfileEditViewModel model, CancellationToken cancellationToken)
     {
-        if (ModelState.IsValid)
+        var profile = await GetProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (!ApplyValidatedProfile(model, profile))
         {
-            _context.Add(userprofile);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            model.CurrentPhotoPath = profile.ProfilePhotoPath;
+            PopulateChoices();
+            return View(model);
         }
-        return View(userprofile);
-    }
-
-    // GET: USERPROFILES/Edit/5
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var userprofile = await _context.UserProfiles.FindAsync(id);
-        if (userprofile == null)
-        {
-            return NotFound();
-        }
-        return View(userprofile);
-    }
-
-    // POST: USERPROFILES/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,Goal,TrainingDaysPerWeek,SessionDurationMinutes,Equipment,WorkoutPlans,WorkoutLogs,ProgressEntries")] UserProfile userprofile)
-    {
-        if (id != userprofile.Id)
-        {
-            return NotFound();
-        }
-
-        if (ModelState.IsValid)
-        {
-            try
-            {
-                _context.Update(userprofile);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserProfileExists(userprofile.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return RedirectToAction(nameof(Index));
-        }
-        return View(userprofile);
-    }
-
-    // GET: USERPROFILES/Delete/5
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var userprofile = await _context.UserProfiles
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (userprofile == null)
-        {
-            return NotFound();
-        }
-
-        return View(userprofile);
-    }
-
-    // POST: USERPROFILES/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int? id)
-    {
-        var userprofile = await _context.UserProfiles.FindAsync(id);
-        if (userprofile != null)
-        {
-            _context.UserProfiles.Remove(userprofile);
-        }
-
-        await _context.SaveChangesAsync();
+        await SavePhotoAsync(model.ProfilePhoto, profile, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        TempData["ProfileSaved"] = "Profile updated.";
         return RedirectToAction(nameof(Index));
     }
 
-    private bool UserProfileExists(int? id)
+    private async Task<UserProfile?> GetProfileAsync(CancellationToken cancellationToken)
     {
-        return _context.UserProfiles.Any(e => e.Id == id);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return await db.UserProfiles.FirstOrDefaultAsync(profile => profile.IdentityUserId == userId, cancellationToken);
     }
+
+    private bool ApplyValidatedProfile(ProfileEditViewModel model, UserProfile profile)
+    {
+        model.PreferredTrainingDays = model.PreferredTrainingDays.Where(value => Weekdays.Contains(value, StringComparer.Ordinal)).Distinct(StringComparer.Ordinal).ToList();
+        model.Equipment = model.Equipment.Where(value => EquipmentOptions.Contains(value, StringComparer.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (!Enum.IsDefined(model.ExperienceLevel)) ModelState.AddModelError(nameof(model.ExperienceLevel), "Select a valid experience level.");
+        if (model.PreferredTrainingDays.Count == 0) ModelState.AddModelError(nameof(model.PreferredTrainingDays), "Choose at least one preferred training day.");
+        if (model.Equipment.Count == 0) ModelState.AddModelError(nameof(model.Equipment), "Choose at least one available equipment option.");
+        if (model.ProfilePhoto is { Length: > 5_242_880 }) ModelState.AddModelError(nameof(model.ProfilePhoto), "Profile photos must be 5 MB or smaller.");
+        if (model.ProfilePhoto is { Length: > 0 } photo)
+        {
+            var extensions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [".jpg"] = "image/jpeg", [".jpeg"] = "image/jpeg", [".png"] = "image/png", [".webp"] = "image/webp"
+            };
+            if (!extensions.TryGetValue(Path.GetExtension(photo.FileName), out var expectedType)
+                || !string.Equals(photo.ContentType, expectedType, StringComparison.OrdinalIgnoreCase))
+                ModelState.AddModelError(nameof(model.ProfilePhoto), "Choose a JPG, PNG, or WebP image.");
+        }
+        if (!ModelState.IsValid) return false;
+        profile.Name = model.Name.Trim();
+        profile.Goal = model.Goal.Trim();
+        profile.ExperienceLevel = model.ExperienceLevel;
+        profile.PreferredTrainingDays = model.PreferredTrainingDays;
+        profile.TrainingDaysPerWeek = (byte)model.PreferredTrainingDays.Count;
+        profile.SessionDurationMinutes = (byte)model.SessionDurationMinutes;
+        profile.Equipment = model.Equipment;
+        return true;
+    }
+
+    private async Task SavePhotoAsync(IFormFile? photo, UserProfile profile, CancellationToken cancellationToken)
+    {
+        if (photo is null || photo.Length == 0) return;
+        var extension = Path.GetExtension(photo.FileName);
+        var folder = Path.Combine(environment.WebRootPath, "uploads", "profiles");
+        Directory.CreateDirectory(folder);
+        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var fullPath = Path.Combine(folder, fileName);
+        await using (var stream = System.IO.File.Create(fullPath)) await photo.CopyToAsync(stream, cancellationToken);
+        RemoveOldPhoto(profile.ProfilePhotoPath);
+        profile.ProfilePhotoPath = $"/uploads/profiles/{fileName}";
+    }
+
+    private void RemoveOldPhoto(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath)) return;
+        var fileName = Path.GetFileName(relativePath);
+        var oldPath = Path.Combine(environment.WebRootPath, "uploads", "profiles", fileName);
+        if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+    }
+
+    private void PopulateChoices()
+    {
+        ViewBag.Goals = Goals;
+        ViewBag.Weekdays = Weekdays;
+        ViewBag.EquipmentGroups = EquipmentGroups;
+    }
+
+    private static ProfileEditViewModel ToViewModel(UserProfile profile) => new()
+    {
+        Name = profile.Name,
+        Goal = profile.Goal,
+        ExperienceLevel = profile.ExperienceLevel,
+        PreferredTrainingDays = profile.PreferredTrainingDays.ToList(),
+        SessionDurationMinutes = profile.SessionDurationMinutes,
+        Equipment = profile.Equipment.ToList(),
+        CurrentPhotoPath = profile.ProfilePhotoPath
+    };
 }

@@ -1,150 +1,68 @@
-
+using System.Security.Claims;
+using FitTrack.Data;
+using FitTrack.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FitTrack.Models;
-using FitTrack.Data;
 
-public class WorkoutLogsController : Controller
+namespace FitTrack.Controllers;
+
+public sealed class WorkoutLogsController(AppDbContext db) : Controller
 {
-    private readonly AppDbContext _context;
-
-    public WorkoutLogsController(AppDbContext context)
+    [HttpGet]
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        _context = context;
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        var logs = await db.WorkoutLogs.AsNoTracking().Include(item => item.WorkoutPlan)
+            .Where(item => item.UserProfileId == profile.Id).OrderByDescending(item => item.CompletedAt).ToListAsync(cancellationToken);
+        return View(logs);
     }
 
-    // GET: WORKOUTLOGS
-    public async Task<IActionResult> Index()    
+    [HttpGet]
+    public IActionResult Create() => View(new ManualWorkoutLogViewModel());
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(ManualWorkoutLogViewModel model, CancellationToken cancellationToken)
     {
-        return View(await _context.WorkoutLogs.ToListAsync());
-    }
-
-    // GET: WORKOUTLOGS/Details/5
-    public async Task<IActionResult> Details(int? id)
-    {
-        if (id == null)
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (!ModelState.IsValid) return View(model);
+        db.WorkoutLogs.Add(new WorkoutLog
         {
-            return NotFound();
-        }
-
-        var workoutlog = await _context.WorkoutLogs
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (workoutlog == null)
-        {
-            return NotFound();
-        }
-
-        return View(workoutlog);
-    }
-
-    // GET: WORKOUTLOGS/Create
-    public IActionResult Create()
-    {
-        return View();
-    }
-
-    // POST: WORKOUTLOGS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,ExerciseName,UserProfileId,UserProfile,CompletedAt,SetsCompleted,RepetitionsCompleted,WeightUsed,Notes")] WorkoutLog workoutlog)
-    {
-        if (ModelState.IsValid)
-        {
-            _context.Add(workoutlog);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(workoutlog);
-    }
-
-    // GET: WORKOUTLOGS/Edit/5
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var workoutlog = await _context.WorkoutLogs.FindAsync(id);
-        if (workoutlog == null)
-        {
-            return NotFound();
-        }
-        return View(workoutlog);
-    }
-
-    // POST: WORKOUTLOGS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,ExerciseName,UserProfileId,UserProfile,CompletedAt,SetsCompleted,RepetitionsCompleted,WeightUsed,Notes")] WorkoutLog workoutlog)
-    {
-        if (id != workoutlog.Id)
-        {
-            return NotFound();
-        }
-
-        if (ModelState.IsValid)
-        {
-            try
-            {
-                _context.Update(workoutlog);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!WorkoutLogExists(workoutlog.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return RedirectToAction(nameof(Index));
-        }
-        return View(workoutlog);
-    }
-
-    // GET: WORKOUTLOGS/Delete/5
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var workoutlog = await _context.WorkoutLogs
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (workoutlog == null)
-        {
-            return NotFound();
-        }
-
-        return View(workoutlog);
-    }
-
-    // POST: WORKOUTLOGS/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int? id)
-    {
-        var workoutlog = await _context.WorkoutLogs.FindAsync(id);
-        if (workoutlog != null)
-        {
-            _context.WorkoutLogs.Remove(workoutlog);
-        }
-
-        await _context.SaveChangesAsync();
+            UserProfileId = profile.Id, ExerciseName = model.ExerciseName.Trim(),
+            CompletedAt = DateTime.SpecifyKind(model.CompletedAt, DateTimeKind.Local).ToUniversalTime(),
+            WorkoutSessionId = Guid.NewGuid().ToString("N"), SetsCompleted = model.SetsCompleted,
+            RepetitionsCompleted = model.RepetitionsCompleted, WeightUsed = model.WeightUsed, Notes = model.Notes.Trim()
+        });
+        await db.SaveChangesAsync(cancellationToken);
         return RedirectToAction(nameof(Index));
     }
 
-    private bool WorkoutLogExists(int? id)
+    [HttpGet]
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
     {
-        return _context.WorkoutLogs.Any(e => e.Id == id);
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        var log = await db.WorkoutLogs.AsNoTracking().Include(item => item.WorkoutPlan)
+            .FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id, cancellationToken);
+        return log is null ? NotFound() : View(log);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        var log = await db.WorkoutLogs.FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id, cancellationToken);
+        if (log is null) return NotFound();
+        db.WorkoutLogs.Remove(log);
+        await db.SaveChangesAsync(cancellationToken);
+        return RedirectToAction(nameof(Index));
+    }
+
+    private Task<UserProfile?> CurrentProfileAsync(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return db.UserProfiles.FirstOrDefaultAsync(profile => profile.IdentityUserId == userId, cancellationToken);
     }
 }

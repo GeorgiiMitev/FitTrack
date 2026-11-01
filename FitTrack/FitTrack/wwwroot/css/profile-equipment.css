@@ -1,0 +1,35 @@
+.profile-equipment-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 1rem;
+    margin-block: .75rem 1rem;
+}
+.profile-equipment-group {
+    border: 1px solid var(--bs-border-color);
+    border-radius: .75rem;
+    padding: 1rem;
+    background: var(--bs-tertiary-bg);
+}
+.profile-equipment-group h3 { font-size: 1rem; margin-bottom: .75rem; }
+.profile-equipment-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: .5rem;
+}
+.profile-equipment-option {
+    display: flex;
+    gap: .55rem;
+    align-items: center;
+    min-height: 2.65rem;
+    padding: .45rem .6rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .55rem;
+    background: var(--bs-white);
+    cursor: pointer;
+}
+.profile-equipment-option:has(input:checked) {
+    border-color: var(--bs-primary);
+    background: var(--bs-primary-bg-subtle);
+}
+.profile-equipment-option input { flex: 0 0 auto; width: 1.05rem; height: 1.05rem; }
+.profile-equipment-option:focus-within { outline: 2px solid var(--bs-primary); outline-offset: 2px; }

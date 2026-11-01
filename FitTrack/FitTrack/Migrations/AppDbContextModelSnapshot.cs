@@ -103,6 +103,9 @@ namespace FitTrack.Migrations
                     b.Property<byte>("Sets")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("WgerExerciseId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("WorkoutPlanId")
                         .HasColumnType("INTEGER");
 
@@ -145,6 +148,9 @@ namespace FitTrack.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ExperienceLevel")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Goal")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -159,7 +165,20 @@ namespace FitTrack.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PreferredTrainingDays")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("'[]'");
+
+                    b.Property<string>("ProfilePhotoPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<byte>("SessionDurationMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("SetupCompleted")
                         .HasColumnType("INTEGER");
 
                     b.Property<byte>("TrainingDaysPerWeek")
@@ -190,6 +209,9 @@ namespace FitTrack.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PlanExerciseId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte>("RepetitionsCompleted")
                         .HasColumnType("INTEGER");
 
@@ -202,9 +224,20 @@ namespace FitTrack.Migrations
                     b.Property<decimal>("WeightUsed")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("WorkoutPlanId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WorkoutSessionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("UserProfileId");
+                    b.HasIndex("PlanExerciseId");
+
+                    b.HasIndex("WorkoutPlanId");
+
+                    b.HasIndex("UserProfileId", "CompletedAt");
 
                     b.ToTable("WorkoutLogs");
                 });
@@ -224,6 +257,13 @@ namespace FitTrack.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAiGenerated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("UserProfileId")
                         .HasColumnType("INTEGER");
@@ -398,13 +438,27 @@ namespace FitTrack.Migrations
 
             modelBuilder.Entity("FitTrack.Models.WorkoutLog", b =>
                 {
+                    b.HasOne("FitTrack.Models.PlanExercise", "PlanExercise")
+                        .WithMany()
+                        .HasForeignKey("PlanExerciseId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("FitTrack.Models.UserProfile", "UserProfile")
                         .WithMany("WorkoutLogs")
                         .HasForeignKey("UserProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FitTrack.Models.WorkoutPlan", "WorkoutPlan")
+                        .WithMany()
+                        .HasForeignKey("WorkoutPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PlanExercise");
+
                     b.Navigation("UserProfile");
+
+                    b.Navigation("WorkoutPlan");
                 });
 
             modelBuilder.Entity("FitTrack.Models.WorkoutPlan", b =>

@@ -2,6 +2,25 @@ using FitTrack.Data;
 using Microsoft.EntityFrameworkCore;
 using FitTrack.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using FitTrack.Services;
+using System.IO;
+using System.Linq;
+
+var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envFile))
+{
+    foreach (var line in File.ReadAllLines(envFile))
+    {
+        var entry = line.Trim();
+        if (entry.Length == 0 || entry.StartsWith('#') || !entry.Contains('=')) continue;
+        var separator = entry.IndexOf('=');
+        var key = entry[..separator].Trim();
+        var value = entry[(separator + 1)..].Trim().Trim('"', '\'');
+        if (key.Length > 0 && Environment.GetEnvironmentVariable(key) is null) Environment.SetEnvironmentVariable(key, value);
+    }
+}
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("AppDbContext") ?? throw new InvalidOperationException("Connection string 'AppDbContext' not found.");
@@ -15,13 +34,30 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-builder.Services.AddHttpClient("OpenAI", client => 
+builder.Services.ConfigureApplicationCookie(options => options.LoginPath = "/Account/Login");
+builder.Services.AddAuthorization(options => options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+builder.Services.AddControllersWithViews(options => options.Filters.Add(new AuthorizeFilter()));
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient("OpenAI", client =>
 {
-    client.BaseAddress = new Uri("https://api.openai.com");
-    client.Timeout = TimeSpan.FromSeconds(90);
+    client.BaseAddress = new Uri(builder.Configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/");
+    client.Timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("OpenAI:TimeoutSeconds", 90));
 });
+builder.Services.AddHttpClient("Gemini", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Gemini:BaseUrl"] ?? "https://generativelanguage.googleapis.com/v1beta/openai/");
+    client.Timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("Gemini:TimeoutSeconds", 90));
+});
+builder.Services.AddHttpClient("Wger", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ExerciseApi:BaseUrl"] ?? "https://wger.de/api/v2/");
+    client.Timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("ExerciseApi:TimeoutSeconds", 20));
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("FitTrack/1.0");
+});
+builder.Services.AddScoped<IExerciseApiService, ExerciseApiService>();
+builder.Services.AddScoped<IAITrainingService, AITrainingService>();
+builder.Services.AddScoped<IWorkoutPlanService, WorkoutPlanService>();
 
 var app = builder.Build();
 
@@ -41,15 +77,12 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}").WithStaticAssets();
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
 
     if (app.Environment.IsDevelopment())
     {

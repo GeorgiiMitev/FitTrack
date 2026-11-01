@@ -1,65 +1,20 @@
 @model IEnumerable<FitTrack.Models.WorkoutPlan>
-
-@{
-    ViewData["Title"] = "Index";
-}
-
-<h1>Index</h1>
-
+@{ ViewData["Title"] = "Workout plans"; }
+<h1>Workout plans</h1>
+@if (ViewBag.ApiNotice is string notice) { <p class="text-warning" role="status">@notice</p> }
 <p>
-    <a asp-action="Create">Create New</a>
+    <a class="btn btn-primary" asp-action="Manual">Create a manual plan</a>
+    <a class="btn btn-secondary" asp-controller="ExerciseLibrary" asp-action="Index">Browse exercises</a>
 </p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.UserProfileId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserProfile)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CreatedAt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Goal)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IsActive)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PlanExercises)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(model => item.UserProfileId)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.UserProfile)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.CreatedAt)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Goal)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.IsActive)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.PlanExercises)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
+<form asp-action="GenerateAi" method="post"><button class="btn btn-success" type="submit">Generate a personalized AI plan</button></form>
+@if (!Model.Any()) { <p>No saved plans yet. Create one manually or generate an AI plan.</p> }
+<table class="table mt-3">
+    <thead><tr><th>Name</th><th>Goal</th><th>Source</th><th>Created</th><th>Exercises</th><th>Status</th><th></th></tr></thead>
+    <tbody>@foreach (var plan in Model)
+    {
+        <tr><td><a asp-action="Details" asp-route-id="@plan.Id">@plan.Name</a></td><td>@plan.Goal</td><td>@(plan.IsAiGenerated ? "AI" : "Manual")</td><td>@plan.CreatedAt.ToLocalTime().ToShortDateString()</td><td>@plan.PlanExercises.Count</td><td>@(plan.IsActive ? "Active" : "Saved")</td><td>
+            @if (!plan.IsActive) { <form asp-action="Activate" asp-route-id="@plan.Id" method="post" class="d-inline"><button type="submit">Activate</button></form> }
+            <form asp-action="Delete" asp-route-id="@plan.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this plan?')"><button type="submit">Delete</button></form>
+        </td></tr>
+    }</tbody>
 </table>

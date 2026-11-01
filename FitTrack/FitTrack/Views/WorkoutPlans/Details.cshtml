@@ -1,59 +1,14 @@
 @model FitTrack.Models.WorkoutPlan
-
-@{
-    ViewData["Title"] = "Details";
+@{ ViewData["Title"] = Model.Name; }
+<h1>@Model.Name</h1>
+<p>Goal: @Model.Goal | Source: @(Model.IsAiGenerated ? "AI-generated" : "Manual") | Status: @(Model.IsActive ? "Active" : "Saved")</p>
+@if (!string.IsNullOrWhiteSpace(TempData["WorkoutSaved"] as string)) { <p role="status">@TempData["WorkoutSaved"]</p> }
+@if (!Model.IsActive) { <form asp-action="Activate" asp-route-id="@Model.Id" method="post"><button type="submit">Activate plan</button></form> }
+else { <a class="btn btn-primary" asp-action="Complete" asp-route-id="@Model.Id">Log completed workout</a> }
+@foreach (var day in Model.PlanExercises.OrderBy(item => item.DayOfTheWeek).GroupBy(item => item.DayOfTheWeek))
+{
+    <section class="mt-4"><h2>@((DayOfWeek)day.Key)</h2>
+        <ul>@foreach (var exercise in day) { <li>@exercise.ExerciseName — @exercise.Sets sets × @exercise.Repetitions reps; rest @exercise.RestSeconds seconds</li> }</ul>
+    </section>
 }
-
-<h1>Details</h1>
-
-<div>
-    <h4>WorkoutPlan</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.UserProfileId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.UserProfileId)
-        </dd>
-    </dl>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.UserProfile)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.UserProfile)
-        </dd>
-    </dl>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CreatedAt)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CreatedAt)
-        </dd>
-    </dl>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Goal)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Goal)
-        </dd>
-    </dl>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IsActive)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IsActive)
-        </dd>
-    </dl>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PlanExercises)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PlanExercises)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+<p><a asp-action="Index">Back to plans</a></p>

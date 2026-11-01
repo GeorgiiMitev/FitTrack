@@ -1,6 +1,7 @@
 ﻿using FitTrack.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace FitTrack.Data
 {
@@ -13,11 +14,20 @@ namespace FitTrack.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<UserProfile>().Property(p => p.Equipment)
-                .HasConversion(v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                    v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
+            var listConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<List<string>, string>(
+                value => System.Text.Json.JsonSerializer.Serialize(value, (System.Text.Json.JsonSerializerOptions?)null),
+                value => System.Text.Json.JsonSerializer.Deserialize<List<string>>(value, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
+            var listComparer = new ValueComparer<List<string>>(
+                (left, right) => left != null && right != null && left.SequenceEqual(right),
+                value => value.Aggregate(0, (hash, item) => HashCode.Combine(hash, item.GetHashCode())),
+                value => value.ToList());
+            modelBuilder.Entity<UserProfile>().Property(p => p.Equipment).HasConversion(listConverter).Metadata.SetValueComparer(listComparer);
+            modelBuilder.Entity<UserProfile>().Property(p => p.PreferredTrainingDays).HasConversion(listConverter).HasDefaultValueSql("'[]'").Metadata.SetValueComparer(listComparer);
             modelBuilder.Entity<UserProfile>().HasIndex(p => p.IdentityUserId).IsUnique();
             modelBuilder.Entity<WorkoutPlan>().HasMany(p => p.PlanExercises).WithOne(e => e.WorkoutPlan).HasForeignKey(e => e.WorkoutPlanId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<WorkoutLog>().HasOne(log => log.WorkoutPlan).WithMany().HasForeignKey(log => log.WorkoutPlanId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<WorkoutLog>().HasOne(log => log.PlanExercise).WithMany().HasForeignKey(log => log.PlanExerciseId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<WorkoutLog>().HasIndex(log => new { log.UserProfileId, log.CompletedAt });
         }
         //protected override void OnModelCreating(ModelBuilder modelBuilder)
         //{

@@ -57,3 +57,22 @@ body {
     margin-bottom: 1.5rem;
     text-align: center;
 }
+
+#fittrack-assistant-panel {
+    max-height: min(72vh, 42rem);
+    overflow-y: auto;
+}
+
+#fittrack-assistant-output {
+    max-height: 5rem;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+.assistant-answer-content {
+    max-height: calc(100dvh - 14rem);
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    line-height: 1.6;
+}

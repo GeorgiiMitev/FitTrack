@@ -1,0 +1,7 @@
+@model FitTrack.Models.ProfileEditViewModel
+@{ ViewData["Title"] = "Set up your fitness profile"; ViewData["FormAction"] = "Setup"; ViewData["SubmitLabel"] = "Save profile and continue"; }
+<h1>Set up your fitness profile</h1>
+<p>These preferences personalize exercise suggestions and training plans. You can change them later.</p>
+<partial name="_ProfileForm" model="Model" />
+@section Styles { <link rel="stylesheet" href="~/css/profile-equipment.css" asp-append-version="true" /> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,22 @@
+@model FitTrack.Models.ManualPlanViewModel
+@{ ViewData["Title"] = "Create manual plan"; }
+<h1>Create a manual workout plan</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="text-warning" role="status">@Model.Error</p> }
+<form asp-action="Manual" method="get" class="mb-3"><label for="search">Find exercise</label><input id="search" name="search" /><button type="submit">Search</button></form>
+<form asp-action="Manual" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3"><label asp-for="PlanName"></label><input asp-for="PlanName" class="form-control" /><span asp-validation-for="PlanName" class="text-danger"></span></div>
+    <div class="mb-3"><label asp-for="Goal"></label><input asp-for="Goal" class="form-control" /><span asp-validation-for="Goal" class="text-danger"></span></div>
+    <h2>Select exercises available with your profile equipment</h2>
+    @if (Model.AvailableExercises.Count == 0) { <p>No suitable exercises are available at the moment. Check the wger connection and equipment in your profile.</p> }
+    @for (var i = 0; i < Model.AvailableExercises.Count; i++)
+    {
+        var item = Model.AvailableExercises[i];
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="ExerciseIds" value="@item.Id" id="exercise-@item.Id" checked="@(Model.ExerciseIds.Contains(item.Id) ? "checked" : null)" />
+            <label class="form-check-label" for="exercise-@item.Id">@item.Name — @string.Join(", ", item.Muscles); equipment: @string.Join(", ", item.Equipment)</label>
+        </div>
+    }
+    <span asp-validation-for="ExerciseIds" class="text-danger"></span>
+    <button class="btn btn-primary mt-3" type="submit">Save plan</button>
+</form>

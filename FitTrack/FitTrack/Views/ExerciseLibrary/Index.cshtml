@@ -1,0 +1,32 @@
+@model FitTrack.Models.ExerciseLibraryViewModel
+@{ ViewData["Title"] = "Exercise library"; }
+<h1>Exercise library</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="text-warning" role="status">@Model.Error</p> }
+@if (Model.UsingCachedData) { <p>Showing the cached wger catalog.</p> }
+<form method="get" asp-action="Index" class="mb-3">
+    <label for="search">Name</label><input id="search" name="search" value="@Model.Search" />
+    <label for="muscle">Muscle</label><select id="muscle" name="muscle"><option value="">All</option>@foreach (var value in Model.Muscles) { <option selected="@(Model.Muscle == value ? "selected" : null)" value="@value">@value</option> }</select>
+    <label for="category">Category</label><select id="category" name="category"><option value="">All</option>@foreach (var value in Model.Categories) { <option selected="@(Model.Category == value ? "selected" : null)" value="@value">@value</option> }</select>
+    <label for="equipment">Equipment</label><select id="equipment" name="equipment"><option value="">All</option>@foreach (var value in Model.EquipmentOptions) { <option selected="@(Model.Equipment == value ? "selected" : null)" value="@value">@value</option> }</select>
+    <button type="submit">Search</button>
+</form>
+<p>@Model.Exercises.Count exercises returned. <a asp-controller="WorkoutPlans" asp-action="Manual">Create a manual plan from library exercises</a></p>
+@if (Model.Exercises.Count == 0) { <p>No exercises match these filters.</p> }
+<div class="row">
+@foreach (var item in Model.Exercises)
+{
+    <article class="col-md-6 mb-3">
+        <div class="card h-100">
+            @if (!string.IsNullOrWhiteSpace(item.ImageThumbnailUrl ?? item.ImageUrl)) { <img class="card-img-top" src="@(item.ImageThumbnailUrl ?? item.ImageUrl)" alt="@item.Name" loading="lazy" /> }
+            <div class="card-body">
+                <h2 class="h5">@item.Name</h2>
+                <p><strong>Category:</strong> @(item.Category.Length == 0 ? "Not supplied" : item.Category)</p>
+                <p><strong>Muscles:</strong> @(item.Muscles.Count == 0 ? "Not supplied" : string.Join(", ", item.Muscles))</p>
+                <p><strong>Equipment:</strong> @(item.Equipment.Count == 0 ? "No equipment metadata" : string.Join(", ", item.Equipment))</p>
+                @if (!string.IsNullOrWhiteSpace(item.Description)) { <details><summary>Instructions</summary><div>@Html.Raw(System.Net.WebUtility.HtmlEncode(item.Description).Replace("\n", "<br />"))</div></details> }
+                <small>Exercise data from <a href="https://wger.de" rel="noopener noreferrer">wger</a>. @if (!string.IsNullOrWhiteSpace(item.LicenseAuthor)) { <span>Image attribution: @item.LicenseAuthor. </span> } @if (!string.IsNullOrWhiteSpace(item.LicenseTitle)) { <span>@item.LicenseTitle. </span> } @if (!string.IsNullOrWhiteSpace(item.LicenseUrl)) { <a href="@item.LicenseUrl" rel="noopener noreferrer">License/source</a> }</small>
+            </div>
+        </div>
+    </article>
+}
+</div>

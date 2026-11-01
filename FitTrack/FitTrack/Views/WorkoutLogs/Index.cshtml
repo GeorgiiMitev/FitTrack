@@ -1,77 +1,11 @@
 @model IEnumerable<FitTrack.Models.WorkoutLog>
-
-@{
-    ViewData["Title"] = "Index";
+@{ ViewData["Title"] = "Workout history"; }
+<h1>Workout history</h1>
+<p><a asp-action="Create" class="btn btn-primary">Log an exercise</a> <a asp-controller="Progress" asp-action="Index">Progress calendar</a></p>
+@if (!Model.Any()) { <p>No workouts recorded yet. Complete an active plan or add a workout.</p> }
+<table class="table"><thead><tr><th>Date</th><th>Exercise</th><th>Plan</th><th>Sets × reps</th><th>Weight</th><th>Notes</th><th></th></tr></thead><tbody>
+@foreach (var log in Model)
+{
+    <tr><td>@log.CompletedAt.ToLocalTime().ToString("g")</td><td>@log.ExerciseName</td><td>@(log.WorkoutPlan?.Name ?? "Manual workout")</td><td>@log.SetsCompleted × @log.RepetitionsCompleted</td><td>@log.WeightUsed kg</td><td>@log.Notes</td><td><a asp-action="Details" asp-route-id="@log.Id">Details</a><form asp-action="Delete" asp-route-id="@log.Id" method="post" class="d-inline"><button type="submit">Delete</button></form></td></tr>
 }
-
-<h1>Index</h1>
-
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.ExerciseName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserProfileId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserProfile)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CompletedAt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.SetsCompleted)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.RepetitionsCompleted)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.WeightUsed)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Notes)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(model => item.ExerciseName)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.UserProfileId)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.UserProfile)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.CompletedAt)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.SetsCompleted)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.RepetitionsCompleted)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.WeightUsed)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Notes)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+</tbody></table>

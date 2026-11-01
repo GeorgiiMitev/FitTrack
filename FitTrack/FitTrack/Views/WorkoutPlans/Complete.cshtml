@@ -1,0 +1,25 @@
+@model FitTrack.Models.WorkoutCompletionViewModel
+@{ ViewData["Title"] = "Log completed workout"; }
+<h1>Log workout: @Model.PlanName</h1>
+<p>Choose the exercises you actually completed. Unchecked exercises will not be logged.</p>
+<form asp-action="Complete" method="post">
+    <input type="hidden" asp-for="PlanId" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    @for (var i = 0; i < Model.Exercises.Count; i++)
+    {
+        <fieldset class="border rounded p-3 mb-3">
+            <legend class="h5">@Model.Exercises[i].ExerciseName</legend>
+            <input type="hidden" asp-for="Exercises[i].PlanExerciseId" />
+            <input type="hidden" asp-for="Exercises[i].ExerciseName" />
+            <input type="hidden" asp-for="Exercises[i].PrescribedSets" />
+            <input type="hidden" asp-for="Exercises[i].PrescribedRepetitions" />
+            <label class="form-check"><input asp-for="Exercises[i].Completed" class="form-check-input" /> Completed</label>
+            <label asp-for="Exercises[i].SetsCompleted">Sets</label><input asp-for="Exercises[i].SetsCompleted" class="form-control" min="1" max="20" />
+            <label asp-for="Exercises[i].RepetitionsCompleted">Repetitions</label><input asp-for="Exercises[i].RepetitionsCompleted" class="form-control" min="1" max="100" />
+            <label asp-for="Exercises[i].WeightUsed">Weight (kg)</label><input asp-for="Exercises[i].WeightUsed" class="form-control" min="0" max="1000" step="0.1" />
+            <label asp-for="Exercises[i].Notes">Notes</label><textarea asp-for="Exercises[i].Notes" class="form-control"></textarea>
+        </fieldset>
+    }
+    <button type="submit" class="btn btn-primary">Save completed workout</button>
+    <a asp-action="Details" asp-route-id="@Model.PlanId">Cancel</a>
+</form>

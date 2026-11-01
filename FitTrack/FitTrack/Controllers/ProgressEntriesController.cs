@@ -1,150 +1,70 @@
-
+using System.Security.Claims;
+using FitTrack.Data;
+using FitTrack.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FitTrack.Models;
-using FitTrack.Data;
 
-public class ProgressEntriesController : Controller
+namespace FitTrack.Controllers;
+
+public sealed class ProgressEntriesController(AppDbContext db) : Controller
 {
-    private readonly AppDbContext _context;
+    [HttpGet]
+    public IActionResult Index() => RedirectToAction("Index", "Progress");
 
-    public ProgressEntriesController(AppDbContext context)
+    [HttpGet]
+    public IActionResult Create() => View(new ProgressEntry { Date = DateOnly.FromDateTime(DateTime.Today) });
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create([Bind("MaxWeight,Date")] ProgressEntry entry, CancellationToken cancellationToken)
     {
-        _context = context;
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (!ModelState.IsValid) return View(entry);
+        entry.UserProfileId = profile.Id;
+        db.ProgressEntries.Add(entry);
+        await db.SaveChangesAsync(cancellationToken);
+        return RedirectToAction("Index", "Progress");
     }
 
-    // GET: PROGRESSENTRYS
-    public async Task<IActionResult> Index()    
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
-        return View(await _context.ProgressEntries.ToListAsync());
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        var entry = await db.ProgressEntries.FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id, cancellationToken);
+        return entry is null ? NotFound() : View(entry);
     }
 
-    // GET: PROGRESSENTRYS/Details/5
-    public async Task<IActionResult> Details(int? id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, [Bind("Id,MaxWeight,Date")] ProgressEntry input, CancellationToken cancellationToken)
     {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var progressentry = await _context.ProgressEntries
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (progressentry == null)
-        {
-            return NotFound();
-        }
-
-        return View(progressentry);
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        if (id != input.Id) return NotFound();
+        var entry = await db.ProgressEntries.FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id, cancellationToken);
+        if (entry is null) return NotFound();
+        if (!ModelState.IsValid) return View(input);
+        entry.MaxWeight = input.MaxWeight;
+        entry.Date = input.Date;
+        await db.SaveChangesAsync(cancellationToken);
+        return RedirectToAction("Index", "Progress");
     }
 
-    // GET: PROGRESSENTRYS/Create
-    public IActionResult Create()
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        return View();
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        var entry = await db.ProgressEntries.FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id, cancellationToken);
+        if (entry is null) return NotFound();
+        db.ProgressEntries.Remove(entry);
+        await db.SaveChangesAsync(cancellationToken);
+        return RedirectToAction("Index", "Progress");
     }
 
-    // POST: PROGRESSENTRYS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,UserProfileId,UserProfile,MaxWeight,Date")] ProgressEntry progressentry)
+    private Task<UserProfile?> CurrentProfileAsync(CancellationToken cancellationToken)
     {
-        if (ModelState.IsValid)
-        {
-            _context.Add(progressentry);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(progressentry);
-    }
-
-    // GET: PROGRESSENTRYS/Edit/5
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var progressentry = await _context.ProgressEntries.FindAsync(id);
-        if (progressentry == null)
-        {
-            return NotFound();
-        }
-        return View(progressentry);
-    }
-
-    // POST: PROGRESSENTRYS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,UserProfileId,UserProfile,MaxWeight,Date")] ProgressEntry progressentry)
-    {
-        if (id != progressentry.Id)
-        {
-            return NotFound();
-        }
-
-        if (ModelState.IsValid)
-        {
-            try
-            {
-                _context.Update(progressentry);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProgressEntryExists(progressentry.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return RedirectToAction(nameof(Index));
-        }
-        return View(progressentry);
-    }
-
-    // GET: PROGRESSENTRYS/Delete/5
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var progressentry = await _context.ProgressEntries
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (progressentry == null)
-        {
-            return NotFound();
-        }
-
-        return View(progressentry);
-    }
-
-    // POST: PROGRESSENTRYS/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int? id)
-    {
-        var progressentry = await _context.ProgressEntries.FindAsync(id);
-        if (progressentry != null)
-        {
-            _context.ProgressEntries.Remove(progressentry);
-        }
-
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
-    }
-
-    private bool ProgressEntryExists(int? id)
-    {
-        return _context.ProgressEntries.Any(e => e.Id == id);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return db.UserProfiles.FirstOrDefaultAsync(profile => profile.IdentityUserId == userId, cancellationToken);
     }
 }

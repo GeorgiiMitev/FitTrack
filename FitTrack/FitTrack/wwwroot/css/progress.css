@@ -1,0 +1,19 @@
+.progress-page { --progress-ink: #162336; --progress-muted: #65758a; --progress-blue: #1677e8; color: var(--progress-ink); }
+.progress-intro { color: var(--progress-muted); max-width: 62rem; }
+.progress-metric { height: 100%; border: 1px solid #e1e8f0; border-radius: .85rem; background: #fff; padding: 1.1rem 1.2rem; box-shadow: 0 .25rem .8rem rgb(22 35 54 / 4%); }
+.progress-metric-label { color: var(--progress-muted); font-size: .9rem; }
+.progress-metric-value { display: block; font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 700; letter-spacing: -.03em; margin-top: .3rem; }
+.progress-card { height: 100%; border: 1px solid #e1e8f0; border-radius: .85rem; background: #fff; padding: 1.1rem; box-shadow: 0 .25rem .8rem rgb(22 35 54 / 4%); }
+.progress-card h2 { font-size: 1.1rem; font-weight: 650; }
+.progress-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.progress-gridline { stroke: #e8edf3; stroke-width: 1; }
+.progress-axis-label { fill: #6b7b8e; font-size: 11px; }
+.progress-bar { fill: var(--progress-blue); rx: 5; }
+.progress-line { fill: none; stroke: var(--progress-blue); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.progress-point { fill: #fff; stroke: var(--progress-blue); stroke-width: 3; }
+.progress-calendar td { min-width: 2.8rem; height: 3.2rem; vertical-align: middle; }
+.progress-calendar a { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; border-radius: 50%; text-decoration: none; color: inherit; }
+.progress-calendar a[aria-current="date"] { outline: 2px solid var(--progress-blue); }
+.progress-calendar a:has(span[aria-label="Workout recorded"]) { background: var(--progress-blue); color: #fff; }
+.progress-table th { color: #5e7085; white-space: nowrap; }
+.progress-empty { color: var(--progress-muted); padding: 1rem; background: #f6f8fb; border-radius: .6rem; }

@@ -1,78 +1,82 @@
-﻿<!DOCTYPE html>
+@using System.Security.Claims
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - FitTrack</title>
-    <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/FitTrack.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">FitTrack</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="UserProfiles" asp-action="Index">Profiles</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="WorkoutPlans" asp-action="Index">WorkoutPlans</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="WorkoutLogs" asp-action="Index">WorkoutLogs</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="ProgressEntries" asp-action="Index">ProgressEntries</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="PlanExercises" asp-action="Index">PlanExercises</a>
-                        </li>
-
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item"><span class="nav-link">@User.Identity.Name</span></li>
-                            <li class="nav-item"><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="nav-link btn btn-link">Изход</button></form></li>
-                        }
-                        else
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Login">Вход</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Register">Регистрация</a></li>
-                        }
-                    </ul>
+<header>
+    <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand" asp-controller="Home" asp-action="Index">FitTrack</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="navbar-nav flex-grow-1">
+                    <a class="nav-link" asp-controller="Home" asp-action="Index">Dashboard</a>
+                    <a class="nav-link" asp-controller="ExerciseLibrary" asp-action="Index">Exercises</a>
+                    <a class="nav-link" asp-controller="WorkoutPlans" asp-action="Index">Plans</a>
+                    <a class="nav-link" asp-controller="WorkoutLogs" asp-action="Index">Workout history</a>
+                    <a class="nav-link" asp-controller="Progress" asp-action="Index">Progress</a>
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Account" ? "account-main" : "")">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - FitTrack - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                <details class="navbar-nav">
+                    <summary class="nav-link">@User.Identity.Name</summary>
+                    <div class="border rounded bg-white p-2">
+                        <a class="d-block" asp-controller="UserProfiles" asp-action="Index">My profile</a>
+                        <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="btn btn-link p-0">Log out</button></form>
+                    </div>
+                </details>
+            }
+            else
+            {
+                <div class="navbar-nav">
+                    <a class="nav-link" asp-controller="Account" asp-action="Login">Log in</a>
+                    <a class="nav-link" asp-controller="Account" asp-action="Register">Register</a>
+                </div>
+            }
         </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    </nav>
+</header>
+<div class="container"><main role="main" class="pb-3">@RenderBody()</main></div>
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <div id="fittrack-assistant" style="position:fixed;right:1rem;bottom:1rem;z-index:1040;">
+        <button id="fittrack-assistant-launcher" type="button" class="btn btn-primary">Fitness assistant</button>
+        <section id="fittrack-assistant-panel" class="border rounded bg-white shadow p-3" style="width:min(22rem,calc(100vw - 2rem));" hidden aria-label="AI fitness assistant">
+            <div class="d-flex justify-content-between align-items-center"><h2 class="h5">Fitness assistant</h2><button id="fittrack-assistant-close" type="button" class="btn btn-sm btn-outline-secondary" aria-label="Close assistant">Close</button></div>
+            <p>Ask a fitness question. FitTrack uses your profile and recent training to personalize answers.</p>
+            <div id="fittrack-assistant-output" class="mb-2" role="status" aria-live="polite"></div>
+            <form id="fittrack-assistant-form" asp-controller="Coach" asp-action="Ask" method="post">
+                @Html.AntiForgeryToken()
+                <label class="visually-hidden" for="fittrack-assistant-question">Your question</label>
+                <textarea id="fittrack-assistant-question" name="question" class="form-control" rows="3" maxlength="2000" required></textarea>
+                <button type="submit" class="btn btn-primary mt-2">Ask</button>
+            </form>
+        </section>
+    </div>
+    <div class="modal fade" id="fittrack-assistant-answer-modal" tabindex="-1" aria-labelledby="fittrack-assistant-answer-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="fittrack-assistant-answer-title">Fitness assistant response</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close response"></button>
+                </div>
+                <div class="modal-body"><div id="fittrack-assistant-answer-content" class="assistant-answer-content" role="document"></div></div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+            </div>
+        </div>
+    </div>
+}
+<footer class="border-top footer text-muted"><div class="container">&copy; 2026 - FitTrack</div></footer>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@if (User.Identity?.IsAuthenticated == true) { <script src="~/js/assistant.js" asp-append-version="true"></script> }
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

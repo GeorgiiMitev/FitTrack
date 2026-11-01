@@ -1,8 +1,24 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-}
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@model FitTrack.Models.DashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; }
+<h1>Welcome, @Model.Profile.Name</h1>
+<p>Your current goal: <strong>@Model.Profile.Goal</strong></p>
+<dl class="row">
+    <dt class="col-sm-3">Completed workouts this week</dt><dd class="col-sm-9">@Model.CompletedWorkoutsThisWeek</dd>
+    <dt class="col-sm-3">Active days this month</dt><dd class="col-sm-9">@Model.ActiveDaysThisMonth</dd>
+</dl>
+<p>
+    <a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Index">View workout plans</a>
+    <a class="btn btn-secondary" asp-controller="ExerciseLibrary" asp-action="Index">Exercise library</a>
+    @if (Model.ActivePlan is not null) { <a class="btn btn-success" asp-controller="WorkoutPlans" asp-action="Complete" asp-route-id="@Model.ActivePlan.Id">Log a workout</a> }
+</p>
+<section class="mt-4">
+    <h2>Active plan</h2>
+    @if (Model.ActivePlan is null) { <p>No active plan yet. Browse plans to create one.</p> }
+    else { <p><a asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@Model.ActivePlan.Id">@Model.ActivePlan.Name</a> — @Model.ActivePlan.Goal (@Model.ActivePlan.PlanExercises.Count exercises)</p> }
+</section>
+<section class="mt-4">
+    <h2>Recent workout activity</h2>
+    @if (Model.RecentWorkouts.Count == 0) { <p>No completed workout records yet.</p> }
+    else { <ul>@foreach (var log in Model.RecentWorkouts) { <li>@log.CompletedAt.ToLocalTime(): @log.ExerciseName — @log.SetsCompleted sets × @log.RepetitionsCompleted reps, @log.WeightUsed kg</li> }</ul> }
+    <a asp-controller="Progress" asp-action="Index">Open progress calendar</a>
+</section>

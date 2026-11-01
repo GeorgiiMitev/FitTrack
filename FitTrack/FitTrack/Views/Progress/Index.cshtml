@@ -1,0 +1,186 @@
+@model FitTrack.Models.ProgressCalendarViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Progress";
+    var first = new DateTime(Model.Year, Model.Month, 1);
+    var offset = ((int)first.DayOfWeek + 6) % 7;
+    var daysInMonth = DateTime.DaysInMonth(Model.Year, Model.Month);
+    var previous = first.AddMonths(-1);
+    var next = first.AddMonths(1);
+    var maxWeeklyWorkouts = Math.Max(4, Model.WeeklyActivity.Select(point => point.Workouts).DefaultIfEmpty().Max());
+    var measurementSeries = Model.Measurements.OrderBy(entry => entry.Date).ThenBy(entry => entry.Id).ToList();
+    var minWeight = measurementSeries.Select(entry => entry.MaxWeight).DefaultIfEmpty(0).Min();
+    var maxWeight = measurementSeries.Select(entry => entry.MaxWeight).DefaultIfEmpty(0).Max();
+    var weightRange = Math.Max(1m, maxWeight - minWeight);
+}
+@section Styles { <link rel="stylesheet" href="~/css/progress.css" asp-append-version="true" /> }
+<div class="progress-page">
+    <header class="mb-4">
+        <h1>Progress</h1>
+        <p class="progress-intro">Track workout consistency, review your training history, and follow your recorded strength measurements over time.</p>
+    </header>
+    @if (TempData["WorkoutSaved"] is string message) { <p role="status" class="alert alert-success">@message</p> }
+
+    <section aria-labelledby="month-summary-heading" class="mb-4">
+        <h2 id="month-summary-heading" class="h5 mb-3">@first.ToString("MMMM yyyy") summary</h2>
+        <div class="row g-3">
+            <div class="col-6 col-lg-3"><article class="progress-metric"><span class="progress-metric-label">Workouts logged</span><strong class="progress-metric-value">@Model.WorkoutsThisMonth</strong></article></div>
+            <div class="col-6 col-lg-3"><article class="progress-metric"><span class="progress-metric-label">Active days</span><strong class="progress-metric-value">@Model.ActiveDaysThisMonth</strong></article></div>
+            <div class="col-6 col-lg-3"><article class="progress-metric"><span class="progress-metric-label">Working sets</span><strong class="progress-metric-value">@Model.SetsThisMonth</strong></article></div>
+            <div class="col-6 col-lg-3"><article class="progress-metric"><span class="progress-metric-label">External load volume <small>(kg × reps)</small></span><strong class="progress-metric-value">@Model.ExternalVolumeThisMonth.ToString("N0")</strong></article></div>
+        </div>
+        <p class="small text-muted mt-2 mb-0">Load volume estimates external weight × completed sets × reps. Bodyweight work is not included in this figure.</p>
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-7">
+            <section class="progress-card" aria-labelledby="weekly-chart-title">
+                <h2 id="weekly-chart-title">Workout consistency · last 8 weeks</h2>
+                <p class="small text-muted">Distinct workout sessions recorded each week.</p>
+                <svg class="progress-chart" viewBox="0 0 760 250" role="img" aria-labelledby="weekly-svg-title weekly-svg-desc">
+                    <title id="weekly-svg-title">Weekly workouts for the last eight weeks</title>
+                    <desc id="weekly-svg-desc">Bar chart of saved workout sessions by week.</desc>
+                    @for (var grid = 0; grid <= 2; grid++)
+                    {
+                        var y = 208 - grid * 85;
+                        <line x1="48" y1="@y" x2="750" y2="@y" class="progress-gridline" />
+                    }
+                    @for (var i = 0; i < Model.WeeklyActivity.Count; i++)
+                    {
+                        var point = Model.WeeklyActivity[i];
+                        var x = 64 + i * 86;
+                        var barHeight = point.Workouts / (double)maxWeeklyWorkouts * 170;
+                        var barY = 208 - barHeight;
+                        <rect x="@x" y="@barY.ToString("0.##", CultureInfo.InvariantCulture)" width="42" height="@Math.Max(0, barHeight).ToString("0.##", CultureInfo.InvariantCulture)" class="progress-bar"><title>@point.Workouts workouts, week of @point.WeekStarting</title></rect>
+                    }
+                </svg>
+                <div class="table-responsive"><table class="table progress-table table-sm mb-0"><thead><tr><th>Week of</th><th>Workouts</th><th>Active days</th><th>Sets</th><th>Load volume¹</th></tr></thead><tbody>
+                @foreach (var point in Model.WeeklyActivity) { <tr><td>@point.WeekStarting.ToString("MMM d")</td><td>@point.Workouts</td><td>@point.ActiveDays</td><td>@point.Sets</td><td>@point.ExternalVolume.ToString("N0") kg × reps</td></tr> }
+                </tbody></table></div>
+                <p class="small text-muted mt-2 mb-0">¹ External weight × completed sets × reps; bodyweight-only exercises are excluded.</p>
+            </section>
+        </div>
+        <div class="col-12 col-xl-5">
+            <section class="progress-card" aria-labelledby="weight-chart-title">
+                <h2 id="weight-chart-title">Recorded max-weight trend</h2>
+                <p class="small text-muted">Based on the measurements you have entered.</p>
+                @if (measurementSeries.Count == 0)
+                {
+                    <p class="progress-empty">Add a progress measurement to start your trend chart.</p>
+                }
+                else
+                {
+                    <svg class="progress-chart" viewBox="0 0 540 250" role="img" aria-labelledby="weight-svg-title weight-svg-desc">
+                        <title id="weight-svg-title">Recorded maximum weight trend</title>
+                        <desc id="weight-svg-desc">Line chart connecting your saved maximum-weight measurements.</desc>
+                        @for (var grid = 0; grid <= 2; grid++)
+                        {
+                            var y = 190 - grid * 75;
+                            <line x1="45" y1="@y" x2="525" y2="@y" class="progress-gridline" />
+                        }
+                        @if (measurementSeries.Count > 1)
+                        {
+                            var points = string.Join(" ", measurementSeries.Select((entry, index) =>
+                            {
+                                var x = 50 + index * 470.0 / (measurementSeries.Count - 1);
+                                var y = 190 - (double)((entry.MaxWeight - minWeight) / weightRange) * 150;
+                                return $"{x.ToString("0.##", CultureInfo.InvariantCulture)},{y.ToString("0.##", CultureInfo.InvariantCulture)}";
+                            }));
+                            <polyline points="@points" class="progress-line" />
+                        }
+                        @for (var i = 0; i < measurementSeries.Count; i++)
+                        {
+                            var entry = measurementSeries[i];
+                            var x = measurementSeries.Count == 1 ? 285 : 50 + i * 470.0 / (measurementSeries.Count - 1);
+                            var y = 190 - (double)((entry.MaxWeight - minWeight) / weightRange) * 150;
+                            <circle cx="@x.ToString("0.##", CultureInfo.InvariantCulture)" cy="@y.ToString("0.##", CultureInfo.InvariantCulture)" r="5" class="progress-point"><title>@entry.Date · @entry.MaxWeight kg</title></circle>
+                        }
+                    </svg>
+                    <p class="small text-muted">Recorded measurements range from @minWeight kg to @maxWeight kg.</p>
+                    <p class="small mb-0">Weight values in kg. Add consistent measurements to compare progress meaningfully.</p>
+                }
+            </section>
+        </div>
+    </div>
+
+    <section class="progress-card mb-4" aria-labelledby="calendar-heading">
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+            <a asp-action="Index" asp-route-year="@previous.Year" asp-route-month="@previous.Month" aria-label="Previous month">&laquo; Previous</a>
+            <h2 id="calendar-heading" class="h5 mb-0">Activity calendar · @first.ToString("MMMM yyyy")</h2>
+            <a asp-action="Index" asp-route-year="@next.Year" asp-route-month="@next.Month" aria-label="Next month">Next &raquo;</a>
+        </div>
+        <p class="small text-muted">Days with a blue marker include saved workout activity. Select a day to inspect its workout details.</p>
+        <div class="table-responsive">
+            <table class="table table-bordered text-center progress-calendar mb-0">
+                <thead><tr><th scope="col">Mon</th><th scope="col">Tue</th><th scope="col">Wed</th><th scope="col">Thu</th><th scope="col">Fri</th><th scope="col">Sat</th><th scope="col">Sun</th></tr></thead>
+                <tbody>
+                @for (var row = 0; row < 6; row++)
+                {
+                    var startDay = row * 7 - offset + 1;
+                    if (startDay > daysInMonth) { break; }
+                    <tr>
+                    @for (var column = 0; column < 7; column++)
+                    {
+                        var dayNumber = startDay + column;
+                        if (dayNumber < 1 || dayNumber > daysInMonth) { <td></td> }
+                        else
+                        {
+                            var date = new DateOnly(Model.Year, Model.Month, dayNumber);
+                            var active = Model.ActiveDates.Contains(date);
+                            var selected = Model.SelectedDate == date;
+                            <td><a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-date="@date.ToString("yyyy-MM-dd")" aria-label="@date.ToString("D")@(active ? ", workout recorded" : "")" aria-current="@(selected ? "date" : null)">@dayNumber@if (active) { <span class="visually-hidden">workout recorded</span> }</a></td>
+                        }
+                    }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    @if (Model.SelectedDate is not null)
+    {
+        <section class="progress-card mb-4" aria-labelledby="selected-day-heading">
+            <h2 id="selected-day-heading">Activity for @Model.SelectedDate.Value.ToString("D")</h2>
+            @if (Model.SelectedLogs.Count == 0) { <p class="progress-empty">No workout was recorded on this day.</p> }
+            else
+            {
+                <p>@Model.SelectedLogs.Count exercise entries recorded. Workout: @string.Join(", ", Model.SelectedLogs.Select(log => log.WorkoutPlan?.Name ?? "Manual workout").Distinct())</p>
+                <div class="table-responsive"><table class="table progress-table"><thead><tr><th>Exercise</th><th>Completed</th><th>Sets × reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>
+                @foreach (var log in Model.SelectedLogs) { <tr><td>@log.ExerciseName</td><td>@log.CompletedAt.ToLocalTime().ToString("t")</td><td>@log.SetsCompleted × @log.RepetitionsCompleted</td><td>@log.WeightUsed kg</td><td>@log.Notes</td></tr> }
+                </tbody></table></div>
+            }
+        </section>
+    }
+
+    <div class="row g-3">
+        <div class="col-12 col-xl-7">
+            <section class="progress-card" aria-labelledby="recent-workouts-heading">
+                <div class="d-flex justify-content-between align-items-center gap-2"><h2 id="recent-workouts-heading">Recent workout entries</h2><a asp-controller="WorkoutLogs" asp-action="Index">Full history</a></div>
+                @if (Model.RecentLogs.Count == 0) { <p class="progress-empty">No workout activity in the last eight weeks yet.</p> }
+                else
+                {
+                    <div class="table-responsive"><table class="table progress-table mb-0"><thead><tr><th>Date</th><th>Exercise</th><th>Sets × reps</th><th>Load</th></tr></thead><tbody>
+                    @foreach (var log in Model.RecentLogs)
+                    {
+                        <tr><td>@log.CompletedAt.ToLocalTime().ToString("MMM d, yyyy")</td><td>@log.ExerciseName</td><td>@log.SetsCompleted × @log.RepetitionsCompleted</td><td>@log.WeightUsed kg</td></tr>
+                    }
+                    </tbody></table></div>
+                }
+            </section>
+        </div>
+        <div class="col-12 col-xl-5">
+            <section class="progress-card" aria-labelledby="measurements-heading">
+                <div class="d-flex justify-content-between align-items-center gap-2"><h2 id="measurements-heading">Progress measurements</h2><a asp-controller="ProgressEntries" asp-action="Create">Add measurement</a></div>
+                @if (Model.Measurements.Count == 0) { <p class="progress-empty">No measurements recorded yet.</p> }
+                else
+                {
+                    <div class="table-responsive"><table class="table progress-table mb-0"><thead><tr><th>Date</th><th>Recorded max weight</th></tr></thead><tbody>
+                    @foreach (var entry in Model.Measurements) { <tr><td>@entry.Date.ToString("MMM d, yyyy")</td><td>@entry.MaxWeight kg</td></tr> }
+                    </tbody></table></div>
+                }
+            </section>
+        </div>
+    </div>
+</div>
+

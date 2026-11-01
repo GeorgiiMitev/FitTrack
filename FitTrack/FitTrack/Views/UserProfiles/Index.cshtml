@@ -1,77 +1,14 @@
-@model IEnumerable<FitTrack.Models.UserProfile>
-
-@{
-    ViewData["Title"] = "Index";
-}
-
-<h1>Index</h1>
-
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Goal)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TrainingDaysPerWeek)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.SessionDurationMinutes)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Equipment)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.WorkoutPlans)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.WorkoutLogs)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ProgressEntries)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(model => item.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Goal)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.TrainingDaysPerWeek)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.SessionDurationMinutes)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.Equipment)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.WorkoutPlans)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.WorkoutLogs)
-            </td>
-            <td>
-                @Html.DisplayFor(model => item.ProgressEntries)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+@model FitTrack.Models.ProfileEditViewModel
+@{ ViewData["Title"] = "My profile"; }
+<h1>My profile</h1>
+<img src="@(Model.CurrentPhotoPath ?? "/images/default-profile.svg")" alt="Profile photo" width="128" height="128" />
+<dl class="row mt-3">
+    <dt class="col-sm-3">Name</dt><dd class="col-sm-9">@Model.Name</dd>
+    <dt class="col-sm-3">Goal</dt><dd class="col-sm-9">@Model.Goal</dd>
+    <dt class="col-sm-3">Experience</dt><dd class="col-sm-9">@Model.ExperienceLevel</dd>
+    <dt class="col-sm-3">Training days</dt><dd class="col-sm-9">@string.Join(", ", Model.PreferredTrainingDays)</dd>
+    <dt class="col-sm-3">Session duration</dt><dd class="col-sm-9">@Model.SessionDurationMinutes minutes</dd>
+    <dt class="col-sm-3">Equipment</dt><dd class="col-sm-9">@string.Join(", ", Model.Equipment)</dd>
+</dl>
+<p><a asp-action="Edit" class="btn btn-primary">Edit profile</a></p>
+@if (TempData["ProfileSaved"] is string saved) { <p role="status">@saved</p> }

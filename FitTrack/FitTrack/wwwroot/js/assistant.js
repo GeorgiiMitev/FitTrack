@@ -10,6 +10,22 @@
 
     const scrollToLatest = () => { messagesElement.scrollTop = messagesElement.scrollHeight; };
 
+    const renderCoachText = (element, text) => {
+        const markup = /\*\*([^*\n]+)\*\*|##/g;
+        let lastIndex = 0;
+        for (const match of text.matchAll(markup)) {
+            const index = match.index;
+            if (index > lastIndex) element.append(document.createTextNode(text.slice(lastIndex, index)));
+            if (match[1]) {
+                const strong = document.createElement('strong');
+                strong.textContent = match[1];
+                element.append(strong);
+            }
+            lastIndex = index + match[0].length;
+        }
+        if (lastIndex < text.length) element.append(document.createTextNode(text.slice(lastIndex)));
+    };
+
     const addMessage = (speaker, text, state = '') => {
         const message = document.createElement('div');
         message.className = `assistant-message assistant-message-${speaker}${state ? ` assistant-message-${state}` : ''}`;
@@ -33,7 +49,8 @@
 
         const body = document.createElement('p');
         body.className = 'assistant-message-text';
-        body.textContent = text;
+        if (speaker === 'coach' && state !== 'error') renderCoachText(body, text);
+        else body.textContent = text;
         bubble.append(body);
 
         if (state !== 'typing') {

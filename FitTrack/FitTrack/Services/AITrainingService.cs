@@ -77,9 +77,10 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
             {
                 var bodyText = await response.Content.ReadAsStringAsync(cancellationToken);
                 var code = ReadErrorCode(bodyText);
-                logger.LogWarning("{Provider} returned HTTP {StatusCode}, code {ErrorCode}.", provider, (int)response.StatusCode, code ?? "unknown");
+                var providerMessage = ReadErrorMessage(bodyText);
+                logger.LogWarning("{Provider} returned HTTP {StatusCode}, code {ErrorCode}: {ProviderMessage}", provider, (int)response.StatusCode, code ?? "unknown", providerMessage ?? "no provider message");
                 if (useGemini && response.StatusCode == HttpStatusCode.ServiceUnavailable)
-                    return new(null, "Gemini is temporarily busy or unavailable after retries. Try again later.");
+                    return new(null, "Gemini returned HTTP 503 and remained unavailable after several retries. This is usually temporary provider overload or an outage; try again shortly. Your saved data is unaffected.");
                 if ((int)response.StatusCode == 429)
                 {
                     if (useGemini)
@@ -120,13 +121,28 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
 
     private static async Task<HttpResponseMessage> SendWithRetryAsync(HttpClient client, string path, object body, bool useGemini, CancellationToken cancellationToken)
     {
+        const int maxAttempts = 4;
         for (var attempt = 0; ; attempt++)
         {
             var response = await client.PostAsJsonAsync(path, body, cancellationToken);
-            if (!useGemini || response.StatusCode != HttpStatusCode.ServiceUnavailable || attempt >= 2) return response;
+            if (!useGemini || response.StatusCode != HttpStatusCode.ServiceUnavailable || attempt >= maxAttempts - 1) return response;
             response.Dispose();
-            await Task.Delay(TimeSpan.FromMilliseconds(1000 * (1 << attempt) + Random.Shared.Next(0, 251)), cancellationToken);
+            var backoffMilliseconds = Math.Min(8000, 2000 * (1 << attempt));
+            await Task.Delay(TimeSpan.FromMilliseconds(backoffMilliseconds + Random.Shared.Next(0, 1001)), cancellationToken);
         }
+    }
+
+    private static string? ReadErrorMessage(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object) return null;
+            return error.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String
+                ? message.GetString()
+                : null;
+        }
+        catch (JsonException) { return null; }
     }
 
     private static string? ReadChatCompletion(JsonElement root)

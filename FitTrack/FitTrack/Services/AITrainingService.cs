@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using FitTrack.Data;
 using FitTrack.Models;
@@ -21,6 +22,7 @@ public interface IAITrainingService
 
 public sealed class AITrainingService(AppDbContext db, IHttpClientFactory clients, IConfiguration configuration, ILogger<AITrainingService> logger) : IAITrainingService
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ProviderGates = new(StringComparer.OrdinalIgnoreCase);
     private const string SafetyInstructions = "You are FitTrack's fitness coach." +
         " Be practical and concise. Give general training guidance, not medical advice." +
         " Do not diagnose. If pain or injury is reported, advise stopping the painful" +
@@ -66,21 +68,22 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
             var client = clients.CreateClient(provider);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
             var model = useGemini
-                ? configuration["Gemini:Model"] ?? configuration["GEMINI_MODEL"] ?? "gemini-3.8-flash"
+                ? configuration["GEMINI_MODEL"] ?? configuration["Gemini:Model"] ?? "gemini-3.8-flash"
                 : configuration["OpenAI:Model"] ?? configuration["OPENAI_MODEL"] ?? "gpt-4o-mini";
             var path = useGemini ? "chat/completions" : "v1/responses";
             object body = useGemini
                 ? new { model, messages = new[] { new { role = "system", content = instructions }, new { role = "user", content = context } } }
                 : new { model, instructions, input = context };
-            using var response = await SendWithRetryAsync(client, path, body, useGemini, cancellationToken);
+            using var response = await SendQueuedWithRetryAsync(provider, client, path, body, useGemini, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 var bodyText = await response.Content.ReadAsStringAsync(cancellationToken);
                 var code = ReadErrorCode(bodyText);
-                var providerMessage = ReadErrorMessage(bodyText);
-                logger.LogWarning("{Provider} returned HTTP {StatusCode}, code {ErrorCode}: {ProviderMessage}", provider, (int)response.StatusCode, code ?? "unknown", providerMessage ?? "no provider message");
+                logger.LogWarning("{Provider} returned HTTP {StatusCode}, code {ErrorCode}.", provider, (int)response.StatusCode, code ?? "unknown");
                 if (useGemini && response.StatusCode == HttpStatusCode.ServiceUnavailable)
-                    return new(null, "Gemini returned HTTP 503 and remained unavailable after several retries. This is usually temporary provider overload or an outage; try again shortly. Your saved data is unaffected.");
+                    return new(null, "Gemini is temporarily busy or unavailable after retries. Try again later.");
+                if (useGemini && response.StatusCode == HttpStatusCode.NotFound)
+                    return new(null, $"Gemini could not find the configured model '{model}'. Check the model ID in appsettings.json or GEMINI_MODEL; for Flash-Lite, use 'gemini-3.5-flash-lite'.");
                 if ((int)response.StatusCode == 429)
                 {
                     if (useGemini)
@@ -107,10 +110,15 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
             logger.LogWarning(ex, "{Provider} training request failed.", provider);
             return new(null, $"FitTrack could not reach {provider}. Check that the app server can connect to the provider API and try again.");
         }
-        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation(ex, "{Provider} training request was cancelled by the client.", provider);
+                return new(null, "The AI request was interrupted. Please try again.");
+            }
             logger.LogWarning(ex, "{Provider} training request timed out.", provider);
-            return new(null, $"The {provider} request timed out. Check the connection and try again.");
+            return new(null, $"The {provider} request timed out. Try again; saved plans and workout history are unaffected.");
         }
         catch (JsonException ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -119,30 +127,29 @@ public sealed class AITrainingService(AppDbContext db, IHttpClientFactory client
         }
     }
 
-    private static async Task<HttpResponseMessage> SendWithRetryAsync(HttpClient client, string path, object body, bool useGemini, CancellationToken cancellationToken)
+    private static async Task<HttpResponseMessage> SendQueuedWithRetryAsync(string provider, HttpClient client, string path, object body, bool useGemini, CancellationToken cancellationToken)
     {
-        const int maxAttempts = 4;
-        for (var attempt = 0; ; attempt++)
+        var gate = ProviderGates.GetOrAdd(provider, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        try
         {
-            var response = await client.PostAsJsonAsync(path, body, cancellationToken);
-            if (!useGemini || response.StatusCode != HttpStatusCode.ServiceUnavailable || attempt >= maxAttempts - 1) return response;
-            response.Dispose();
-            var backoffMilliseconds = Math.Min(8000, 2000 * (1 << attempt));
-            await Task.Delay(TimeSpan.FromMilliseconds(backoffMilliseconds + Random.Shared.Next(0, 1001)), cancellationToken);
+            return await SendWithRetryAsync(client, path, body, useGemini, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 
-    private static string? ReadErrorMessage(string body)
+    private static async Task<HttpResponseMessage> SendWithRetryAsync(HttpClient client, string path, object body, bool useGemini, CancellationToken cancellationToken)
     {
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            using var document = JsonDocument.Parse(body);
-            if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object) return null;
-            return error.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String
-                ? message.GetString()
-                : null;
+            var response = await client.PostAsJsonAsync(path, body, cancellationToken);
+            if (!useGemini || response.StatusCode != HttpStatusCode.ServiceUnavailable || attempt >= 2) return response;
+            response.Dispose();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000 * (1 << attempt) + Random.Shared.Next(0, 251)), cancellationToken);
         }
-        catch (JsonException) { return null; }
     }
 
     private static string? ReadChatCompletion(JsonElement root)

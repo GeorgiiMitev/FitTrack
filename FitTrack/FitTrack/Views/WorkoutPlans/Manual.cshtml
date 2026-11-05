@@ -1,33 +1,58 @@
 @model FitTrack.Models.ManualPlanViewModel
-@{ ViewData["Title"] = "Create manual plan"; }
-<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-action="Index">← Workout plans</a><h1 class="mt-3">Create a workout plan</h1><p>Choose exercises that match your profile equipment. We’ll spread them across your preferred days.</p></div></header>
+@{ ViewData["Title"] = "Create manual plan"; var firstResult = Model.TotalItems == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1; var lastResult = Math.Min(Model.Page * Model.PageSize, Model.TotalItems); }
+<header class="page-header manual-plan-heading"><div class="page-header-copy"><a class="back-link" asp-action="Index">← Workout plans</a><h1 class="mt-3">Create a workout plan</h1><p>FitTrack recommends exercises that match the equipment in your profile. You can also include the rest of the library whenever you need more options.</p></div></header>
 @if (!string.IsNullOrWhiteSpace(Model.Error)) { <div class="alert alert-warning" role="status">@Model.Error</div> }
-<form asp-action="Manual" method="get" class="row g-2 align-items-end mb-3">
-    <div class="col-sm-8 col-lg-6"><label for="search" class="form-label">Find an exercise</label><input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Search by name" /></div>
-    <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Search</button> <a class="btn btn-link" asp-action="Manual">Clear</a></div>
-</form>
-<form asp-action="Manual" method="post" data-loading data-loading-label="Saving plan…">
-    <input type="hidden" asp-for="Search" />
-    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
-    <section class="app-card form-card mb-4">
-        <div class="mb-3"><label asp-for="PlanName" class="form-label">Plan name</label><input asp-for="PlanName" class="form-control" placeholder="e.g. Full-body foundation" /><span asp-validation-for="PlanName" class="field-validation-error small"></span></div>
+<form asp-action="Manual" method="post" data-loading data-loading-label="Saving plan…" class="manual-plan-form">
+    <input type="hidden" asp-for="Page" />
+    @foreach (var selectedId in Model.ExerciseIds.Where(id => Model.AvailableExercises.All(item => item.Id != id)).Distinct())
+    {
+        <input type="hidden" name="ExerciseIds" value="@selectedId" />
+    }
+    <div asp-validation-summary="ModelOnly" class="manual-validation-summary alert alert-danger" role="alert"></div>
+    <section class="manual-exercise-search app-card mb-4" aria-label="Find exercises">
+        <div class="manual-search-field"><label asp-for="Search" class="form-label">Search exercises</label><input asp-for="Search" class="form-control" placeholder="Search by exercise name" /></div>
+        <label class="manual-show-all-toggle"><input type="checkbox" name="showAllExercises" value="true" title="Turn this on to include movements that use equipment not listed in your profile." aria-describedby="show-all-exercises-hint" checked="@(Model.ShowAllExercises ? "checked" : null)" /><span><strong>Show all library exercises</strong><span id="show-all-exercises-hint" class="visually-hidden">Turn this on to include movements that use equipment not listed in your profile.</span></span></label>
+        <div class="manual-search-actions"><button class="btn btn-outline-primary" type="submit" formmethod="get" formaction="@Url.Action("Manual")">Search</button><button class="btn btn-link" type="submit" name="clearSearch" value="true" formmethod="get" formaction="@Url.Action("Manual")">Clear</button></div>
+    </section>
+    <section class="app-card form-card manual-plan-details mb-4" aria-label="Plan details">
+        <div><label asp-for="PlanName" class="form-label">Plan name</label><input asp-for="PlanName" class="form-control" placeholder="e.g. Full-body foundation" /><span asp-validation-for="PlanName" class="field-validation-error small"></span></div>
         <div><label asp-for="Goal" class="form-label">Plan goal</label><input asp-for="Goal" class="form-control" /><span asp-validation-for="Goal" class="field-validation-error small"></span></div>
     </section>
-    <div class="section-heading"><div><h2>Choose your exercises</h2><p>Select at least one movement. You can refine your list with search.</p></div><span class="selection-count" data-selection-count aria-live="polite">0 exercises selected</span></div>
-    @if (Model.AvailableExercises.Count == 100) { <p class="text-secondary">Showing the first 100 matches. Search by name to narrow the list.</p> }
+    <div class="section-heading"><div><h2>@(Model.ShowAllExercises ? "All library exercises" : "Recommended for your profile")</h2><p>Select each movement with its checkbox. Muscle groups show the main areas worked; equipment shows what the movement needs.</p><p class="manual-plan-howto">FitTrack recommends movements you can do with equipment in your profile. It spreads your selections across your preferred training days and sets starting sets, reps, and rest times based on your experience and goal. Review the saved plan before activating it.</p></div><span class="selection-count" data-selection-count aria-live="polite">@Model.ExerciseIds.Count exercises selected</span></div>
+    <div class="manual-exercise-pagination" aria-label="Exercise page navigation">
+        <span>Showing @firstResult–@lastResult of @Model.TotalItems exercises</span>
+        @if (Model.PageCount > 1)
+        {
+            <div class="manual-page-controls">
+                <button class="btn btn-outline-secondary btn-sm" type="submit" name="gotoPage" value="@(Model.Page - 1)" formmethod="get" formaction="@Url.Action("Manual")" disabled="@(Model.Page == 1)">← Previous</button>
+                <span>Page @Model.Page of @Model.PageCount</span>
+                <button class="btn btn-outline-secondary btn-sm" type="submit" name="gotoPage" value="@(Model.Page + 1)" formmethod="get" formaction="@Url.Action("Manual")" disabled="@(Model.Page == Model.PageCount)">Next →</button>
+            </div>
+        }
+    </div>
     @if (Model.AvailableExercises.Count == 0) { <p>No suitable exercises are available at the moment. Check the wger connection and equipment in your profile.</p> }
-    <div class="row g-2">
+    <div class="row g-3">
     @for (var i = 0; i < Model.AvailableExercises.Count; i++)
     {
         var item = Model.AvailableExercises[i];
-        <div class="col-12 col-lg-6"><div class="form-check border rounded p-3 h-100">
+        <div class="col-12 col-lg-6"><label class="exercise-choice-card" for="exercise-@item.Id">
             <input class="form-check-input" type="checkbox" name="ExerciseIds" value="@item.Id" id="exercise-@item.Id" checked="@(Model.ExerciseIds.Contains(item.Id) ? "checked" : null)" />
-            <label class="form-check-label fw-semibold" for="exercise-@item.Id">@item.Name</label>
-            <div class="small text-secondary ms-4">@string.Join(", ", item.Muscles) · Equipment: @string.Join(", ", item.Equipment)</div>
-        </div></div>
+            <span class="exercise-choice-content"><strong>@item.Name</strong><small><b>Muscles:</b> @(item.Muscles.Count == 0 ? "Not listed" : string.Join(", ", item.Muscles))</small><small><b>Equipment:</b> @(item.Equipment.Count == 0 ? "Bodyweight / not listed" : string.Join(", ", item.Equipment))</small></span>
+        </label></div>
     }
     </div>
     <span asp-validation-for="ExerciseIds" class="text-danger"></span>
-    <button class="btn btn-primary mt-3" type="submit">Save plan</button>
+    <div class="manual-exercise-pagination manual-exercise-pagination-bottom" aria-label="Exercise page navigation">
+        <span>Showing @firstResult–@lastResult of @Model.TotalItems exercises</span>
+        @if (Model.PageCount > 1)
+        {
+            <div class="manual-page-controls">
+                <button class="btn btn-outline-secondary btn-sm" type="submit" name="gotoPage" value="@(Model.Page - 1)" formmethod="get" formaction="@Url.Action("Manual")" disabled="@(Model.Page == 1)">← Previous</button>
+                <span>Page @Model.Page of @Model.PageCount</span>
+                <button class="btn btn-outline-secondary btn-sm" type="submit" name="gotoPage" value="@(Model.Page + 1)" formmethod="get" formaction="@Url.Action("Manual")" disabled="@(Model.Page == Model.PageCount)">Next →</button>
+            </div>
+        }
+    </div>
+    <div class="manual-plan-submit"><button class="btn btn-primary" type="submit">Save workout plan <span aria-hidden="true">→</span></button></div>
 </form>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

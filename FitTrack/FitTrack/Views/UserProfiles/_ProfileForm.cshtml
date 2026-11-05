@@ -3,39 +3,27 @@
 @{ var equipmentGroups = (IReadOnlyDictionary<string, string[]>)ViewBag.EquipmentGroups; }
 <form asp-action="@formAction" method="post" enctype="multipart/form-data" data-loading data-loading-label="Saving profile…">
     <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
-    <div class="mb-3">
-        <label asp-for="Name" class="form-label">Name</label>
-        <input asp-for="Name" class="form-control" autocomplete="name" />
-        <span asp-validation-for="Name" class="text-danger"></span>
-    </div>
-    <div class="mb-3">
-        <label asp-for="Goal" class="form-label">Fitness goal</label>
-        <select asp-for="Goal" class="form-select">
-            @foreach (string goal in ViewBag.Goals) { <option value="@goal">@goal</option> }
-        </select>
-        <span asp-validation-for="Goal" class="text-danger"></span>
-    </div>
-    <div class="mb-3">
-        <label asp-for="ExperienceLevel" class="form-label">Experience level</label>
-        <select asp-for="ExperienceLevel" asp-items="Html.GetEnumSelectList<FitTrack.Models.FitnessExperienceLevel>()" class="form-select"></select>
-    </div>
-    <div class="mb-3">
-        <label asp-for="SessionDurationMinutes" class="form-label">Preferred session duration (minutes)</label>
-        <input asp-for="SessionDurationMinutes" class="form-control" type="number" min="15" max="240" />
-        <span asp-validation-for="SessionDurationMinutes" class="text-danger"></span>
-    </div>
-    <fieldset class="mb-4">
-        <legend>Preferred training days</legend>
-        <p class="form-text mt-0">Choose the days you usually want to train.</p>
+    <section class="profile-form-section">
+        <div class="profile-form-section-heading"><span>01</span><div><h2>Your training profile</h2><p>Set the basics FitTrack uses to shape recommendations.</p></div></div>
+        <div class="profile-basics-grid">
+            <div><label asp-for="Name" class="form-label">Name</label><input asp-for="Name" class="form-control" autocomplete="name" /><span asp-validation-for="Name" class="text-danger small"></span></div>
+            <div><label asp-for="Goal" class="form-label">Fitness goal</label><select asp-for="Goal" class="form-select">@foreach (string goal in ViewBag.Goals) { <option value="@goal">@goal</option> }</select><span asp-validation-for="Goal" class="text-danger small"></span></div>
+            <div><label asp-for="ExperienceLevel" class="form-label">Experience level</label><select asp-for="ExperienceLevel" asp-items="Html.GetEnumSelectList<FitTrack.Models.FitnessExperienceLevel>()" class="form-select"></select></div>
+            <div><label asp-for="SessionDurationMinutes" class="form-label">Preferred session length</label><div class="profile-duration-field"><input asp-for="SessionDurationMinutes" class="form-control" type="number" min="15" max="240" /><span>minutes</span></div><span asp-validation-for="SessionDurationMinutes" class="text-danger small"></span></div>
+        </div>
+    </section>
+    <fieldset class="profile-form-section">
+        <legend class="visually-hidden">Preferred training days</legend>
+        <div class="profile-form-section-heading"><span>02</span><div><h2>Preferred training days</h2><p>Select the days you usually want to train.</p></div></div>
         <div class="profile-day-options">@foreach (string day in ViewBag.Weekdays)
         {
             <label class="profile-day-option"><input type="checkbox" name="PreferredTrainingDays" value="@day" checked="@(Model.PreferredTrainingDays.Contains(day) ? "checked" : null)" /><span>@day</span></label>
         }</div>
         <span asp-validation-for="PreferredTrainingDays" class="text-danger d-block"></span>
     </fieldset>
-    <fieldset class="mb-3">
-        <legend>Available equipment</legend>
-        <p class="text-muted">Choose everything you can use. Select several options across categories.</p>
+    <fieldset class="profile-form-section">
+        <legend class="visually-hidden">Available equipment</legend>
+        <div class="profile-form-section-heading"><span>03</span><div><h2>Available equipment</h2><p>Select everything you can use. This helps recommend suitable exercises.</p></div></div>
         <div class="profile-equipment-groups">
         @foreach (var group in equipmentGroups)
         {
@@ -55,10 +43,6 @@
         </div>
         <span asp-validation-for="Equipment" class="text-danger d-block"></span>
     </fieldset>
-    <div class="mb-3">
-        <label asp-for="ProfilePhoto" class="form-label">Profile photo (JPG, PNG, or WebP; up to 5 MB)</label>
-        <input asp-for="ProfilePhoto" class="form-control" type="file" accept="image/jpeg,image/png,image/webp" />
-        <span asp-validation-for="ProfilePhoto" class="text-danger"></span>
-    </div>
-    <div class="profile-form-footer"><p class="small text-secondary mb-0">Your profile details stay editable at any time.</p><button type="submit" class="btn btn-primary">@submitLabel</button></div>
+    <section class="profile-photo-section"><div><label asp-for="ProfilePhoto" class="form-label">Profile photo <small>JPG, PNG, or WebP · up to 5 MB</small></label><input asp-for="ProfilePhoto" class="form-control" type="file" accept="image/jpeg,image/png,image/webp" /><span asp-validation-for="ProfilePhoto" class="text-danger small"></span></div></section>
+    <div class="profile-form-footer"><p>Your profile details stay editable at any time.</p><button type="submit" class="btn btn-primary">@submitLabel <span aria-hidden="true">→</span></button></div>
 </form>

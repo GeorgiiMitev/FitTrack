@@ -4,11 +4,13 @@
     <div class="page-header-copy"><span class="eyebrow">BUILD YOUR ROUTINE</span><h1>Workout plans</h1><p>Plans shaped around your goals, training days, and available equipment.</p></div>
     <div class="page-actions"><a class="btn btn-primary" asp-action="Manual">Create a plan</a></div>
 </header>
-@if (ViewBag.ApiNotice is string notice) { <div class="alert alert-warning" role="status">@notice</div> }
+@if (ViewBag.ApiNotice is string notice) { <section class="plan-generation-error" role="alert" aria-labelledby="plan-error-heading"><div class="plan-error-icon" aria-hidden="true">!</div><div class="plan-error-copy"><h2 id="plan-error-heading">The AI plan could not be generated</h2><p>@notice</p><span>Your profile and saved plans are still available. You can create a plan yourself below.</span></div><a class="btn btn-outline-primary" asp-action="Manual">Create a plan manually</a></section> }
 
-<section class="app-card mb-4" aria-labelledby="plan-builder-heading">
-    <div class="plan-builder-row"><div><span class="eyebrow">A QUICK START</span><h2 id="plan-builder-heading" class="h5 mb-1">Need a starting point?</h2><p class="text-secondary mb-0">Generate a draft using your profile and matching exercises. You can review it before activating it.</p></div>
-        <form asp-action="GenerateAi" method="post" data-loading data-loading-label="Building your plan…"><button class="btn btn-outline-primary" type="submit">Generate an AI plan</button></form>
+<section class="quick-start-section mb-4" aria-labelledby="plan-builder-heading">
+    <span class="eyebrow">A QUICK START</span>
+    <div class="plan-builder-row">
+        <div class="plan-builder-copy"><h2 id="plan-builder-heading" class="h5 mb-1">Need a starting point?</h2><p class="text-secondary mb-0">AI builds a draft using exercises from the library that match your goal, experience, training days, and saved equipment. Review it before activating it, or search the full library and choose exercises yourself in a manual plan.</p></div>
+        <form asp-action="GenerateAi" method="post" data-loading data-loading-label="Building your plan…"><button class="btn btn-primary" type="submit">Generate an AI plan <span aria-hidden="true">→</span></button></form>
     </div>
 </section>
 
@@ -36,7 +38,7 @@
                 <p class="text-secondary mb-3">@plan.Goal</p>
                 <div class="plan-meta"><span>Created @plan.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</span><span>@plan.PlanExercises.Select(item => item.DayOfTheWeek).Distinct().Count() training days</span></div>
                 <div class="plan-card-actions mt-3">
-                    @if (plan.IsActive) { <a class="btn btn-primary btn-sm" asp-action="Complete" asp-route-id="@plan.Id">Log a workout</a> }
+                    @if (plan.IsActive) { <a class="btn btn-primary btn-sm" asp-action="Complete" asp-route-id="@plan.Id">Log a workout</a><form asp-action="Deactivate" asp-route-id="@plan.Id" method="post" data-loading data-loading-label="Deactivating…"><button class="btn btn-outline-secondary btn-sm" type="submit">Deactivate</button></form> }
                     else { <form asp-action="Activate" asp-route-id="@plan.Id" method="post" data-loading data-loading-label="Activating…"><button class="btn btn-outline-primary btn-sm" type="submit">Activate plan</button></form> }
                     <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@plan.Id">View details</a>
                     <form asp-action="Delete" asp-route-id="@plan.Id" method="post" data-confirm="Delete ‘@plan.Name’? This won’t remove workout history." class="ms-auto"><button class="btn btn-link btn-sm text-danger text-decoration-none" type="submit">Delete</button></form>

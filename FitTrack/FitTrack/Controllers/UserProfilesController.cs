@@ -54,7 +54,7 @@ public sealed class UserProfilesController(AppDbContext db, IWebHostEnvironment 
         profile.SetupCompleted = true;
         await SavePhotoAsync(model.ProfilePhoto, profile, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction("Dashboard", "Home");
     }
 
     [HttpGet]

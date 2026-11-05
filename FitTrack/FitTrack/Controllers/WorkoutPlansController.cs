@@ -38,17 +38,23 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
     }
 
     [HttpGet]
-    public async Task<IActionResult> Manual(string? search, CancellationToken cancellationToken)
+    public async Task<IActionResult> Manual(string? search, int page = 1, int? gotoPage = null, bool clearSearch = false, bool showAllExercises = false, List<int>? exerciseIds = null, CancellationToken cancellationToken = default)
     {
+        if (clearSearch) search = null;
         var profile = await CurrentProfileAsync(cancellationToken);
         if (profile is null) return NotFound();
         var catalog = await exercises.GetExercisesAsync(cancellationToken);
-        var suitable = catalog.Exercises.Where(item => WorkoutPlanService.IsEquipmentAvailable(item, profile.Equipment));
-        if (!string.IsNullOrWhiteSpace(search)) suitable = suitable.Where(item => item.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+        var library = catalog.Exercises.AsEnumerable();
+        if (!showAllExercises) library = library.Where(item => WorkoutPlanService.IsEquipmentAvailable(item, profile.Equipment));
+        if (!string.IsNullOrWhiteSpace(search)) library = library.Where(item => item.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+        var ordered = library.OrderBy(item => item.Name).ToList();
+        page = Math.Max(1, gotoPage ?? page);
+        page = Math.Min(page, Math.Max(1, (int)Math.Ceiling(ordered.Count / 12d)));
         var model = new ManualPlanViewModel
         {
-            Goal = profile.Goal, Search = search,
-            AvailableExercises = suitable.OrderBy(item => item.Name).Take(100).ToList(),
+            Goal = profile.Goal, Search = search, ShowAllExercises = showAllExercises, Page = page, TotalItems = ordered.Count,
+            ExerciseIds = exerciseIds?.Distinct().ToList() ?? new(),
+            AvailableExercises = ordered.Skip((page - 1) * 12).Take(12).ToList(),
             Error = catalog.Error
         };
         return View(model);
@@ -66,9 +72,14 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
             if (result.Success) return RedirectToAction(nameof(Details), new { id = result.Plan!.Id });
             model.Error = result.Error;
         }
-        model.AvailableExercises = catalog.Exercises.Where(item => WorkoutPlanService.IsEquipmentAvailable(item, profile.Equipment))
+        var suitable = catalog.Exercises.AsEnumerable();
+        if (!model.ShowAllExercises) suitable = suitable.Where(item => WorkoutPlanService.IsEquipmentAvailable(item, profile.Equipment));
+        var ordered = suitable
             .Where(item => string.IsNullOrWhiteSpace(model.Search) || item.Name.Contains(model.Search, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(item => item.Name).Take(100).ToList();
+            .OrderBy(item => item.Name).ToList();
+        model.TotalItems = ordered.Count;
+        model.Page = Math.Clamp(model.Page, 1, Math.Max(1, (int)Math.Ceiling(model.TotalItems / (double)model.PageSize)));
+        model.AvailableExercises = ordered.Skip((model.Page - 1) * model.PageSize).Take(model.PageSize).ToList();
         if (!string.IsNullOrWhiteSpace(catalog.Error)) model.Error ??= catalog.Error;
         return View(model);
     }
@@ -103,6 +114,17 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Deactivate(int id, CancellationToken cancellationToken)
+    {
+        var profile = await CurrentProfileAsync(cancellationToken);
+        if (profile is null) return NotFound();
+        var plan = await db.WorkoutPlans.FirstOrDefaultAsync(item => item.Id == id && item.UserProfileId == profile.Id && item.IsActive, cancellationToken);
+        if (plan is null) return NotFound();
+        plan.IsActive = false;
+        await db.SaveChangesAsync(cancellationToken);
+        return RedirectToAction(nameof(Index));
+    }
     [HttpGet]
     public async Task<IActionResult> Complete(int id, DayOfWeek? weekday, CancellationToken cancellationToken)
     {
@@ -158,6 +180,7 @@ public sealed class WorkoutPlansController(AppDbContext db, IExerciseApiService 
                 RepetitionsCompleted = item.RepetitionsCompleted, WeightUsed = item.WeightUsed, Notes = item.Notes?.Trim() ?? string.Empty
             });
         }
+        plan.IsActive = false;
         await db.SaveChangesAsync(cancellationToken);
         TempData["WorkoutSaved"] = "Workout saved to your history.";
         return RedirectToAction("Index", "Progress", new { date = DateTime.Now.ToString("yyyy-MM-dd") });

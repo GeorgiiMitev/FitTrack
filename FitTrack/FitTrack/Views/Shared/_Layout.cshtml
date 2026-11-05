@@ -1,74 +1,86 @@
 @using System.Security.Claims
 @{
-    var activeController = ViewContext.RouteData.Values["controller"]?.ToString();
-    var activeAction = ViewContext.RouteData.Values["action"]?.ToString();
-    string Active(string controller, string? action = null) =>
-        string.Equals(activeController, controller, StringComparison.OrdinalIgnoreCase)
-        && (action is null || string.Equals(activeAction, action, StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty;
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var useAppShell = isSignedIn && ViewData["UsePublicLayout"] as bool? != true;
+    var displayName = User.Identity?.Name ?? "Athlete";
+    var username = displayName.Contains('@') ? displayName[..displayName.IndexOf('@')] : displayName;
+    if (!string.IsNullOrEmpty(username)) username = char.ToUpperInvariant(username[0]) + username[1..];
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f5f7fb" />
-    <title>@ViewData["Title"] · FitTrack</title>
+    @if (useAppShell)
+    {
+        <script>try { document.documentElement.dataset.theme = localStorage.getItem('fittrack-theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.theme = 'dark'; }</script>
+    }
+    else
+    {
+        <script>document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';</script>
+    }
+    <title>@ViewData["Title"] - FitTrack</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/FitTrack.styles.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body>
-<header class="app-header">
-    <nav class="navbar navbar-expand-lg app-navbar">
-        <div class="container app-container">
-            <a class="navbar-brand app-brand" asp-controller="Home" asp-action="Index" aria-label="FitTrack home">
-                <span class="app-brand-mark" aria-hidden="true">F</span><span>FitTrack</span>
+<body class="@(useAppShell ? "app-authenticated" : "app-public")">
+<a class="skip-link" href="#main-content">Skip to main content</a>
+@if (useAppShell)
+{
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a class="brand-lockup" asp-controller="Home" asp-action="Dashboard" aria-label="FitTrack dashboard">
+                <span class="brand-mark"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 15h4l3-8 5 14 3-8h5" /></svg></span>
+                <span>FIT<span>TRACK</span></span>
             </a>
-            <button class="navbar-toggler app-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#fittrack-navigation" aria-controls="fittrack-navigation" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="fittrack-navigation">
-                @if (User.Identity?.IsAuthenticated == true)
-                {
-                    <ul class="navbar-nav app-nav-links me-auto">
-                        <li class="nav-item"><a class="nav-link @Active("Home", "Index")" aria-current="@(Active("Home", "Index").Length > 0 ? "page" : null)" asp-controller="Home" asp-action="Index">Overview</a></li>
-                        <li class="nav-item"><a class="nav-link @Active("WorkoutPlans")" aria-current="@(Active("WorkoutPlans").Length > 0 ? "page" : null)" asp-controller="WorkoutPlans" asp-action="Index">Plans</a></li>
-                        <li class="nav-item"><a class="nav-link @Active("WorkoutLogs")" aria-current="@(Active("WorkoutLogs").Length > 0 ? "page" : null)" asp-controller="WorkoutLogs" asp-action="Index">History</a></li>
-                        <li class="nav-item"><a class="nav-link @Active("Progress")" aria-current="@(Active("Progress").Length > 0 ? "page" : null)" asp-controller="Progress" asp-action="Index">Progress</a></li>
-                        <li class="nav-item"><a class="nav-link @Active("ExerciseLibrary")" aria-current="@(Active("ExerciseLibrary").Length > 0 ? "page" : null)" asp-controller="ExerciseLibrary" asp-action="Index">Exercises</a></li>
-                    </ul>
-                    <div class="dropdown app-account-menu">
-                        <button class="btn app-account-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="app-avatar" aria-hidden="true">@((User.Identity.Name ?? "F")[0].ToString().ToUpperInvariant())</span>
-                            <span class="app-account-name">@User.Identity.Name</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end app-account-dropdown">
-                            <li><span class="dropdown-header">Your account</span></li>
-                            <li><a class="dropdown-item" asp-controller="UserProfiles" asp-action="Index">My profile</a></li>
-                            <li><hr class="dropdown-divider" /></li>
-                            <li><form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item" type="submit">Log out</button></form></li>
-                        </ul>
-                    </div>
-                }
-                else
-                {
-                    <div class="navbar-nav ms-auto align-items-lg-center gap-lg-2 app-guest-links">
-                        <a class="nav-link" asp-controller="Account" asp-action="Login">Log in</a>
-                        <a class="btn btn-primary btn-sm px-3" asp-controller="Account" asp-action="Register">Create account</a>
-                    </div>
-                }
+            <button id="mobile-nav-toggle" class="mobile-nav-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="app-navigation"><span aria-hidden="true">☰</span></button>
+            <a class="sidebar-user" asp-controller="UserProfiles" asp-action="Index">
+                @await Component.InvokeAsync("ProfileAvatar")
+                <span class="sidebar-user-info"><strong>@username</strong><small>Fitness profile</small></span>
+            </a>
+            <p class="sidebar-section-label">MAIN MENU</p>
+            <nav id="app-navigation" class="app-nav" aria-label="Main navigation">
+                <a asp-controller="Home" asp-action="Dashboard" class="app-nav-link" aria-current="@(currentController == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "page" : null)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Dashboard</span></a>
+                <a asp-controller="ExerciseLibrary" asp-action="Index" class="app-nav-link" aria-current="@(currentController == "ExerciseLibrary" ? "page" : null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9v6M3.5 10v4M18 9v6m2.5-5v4M6 12h12"/></svg><span>Exercise library</span></a>
+                <a asp-controller="WorkoutPlans" asp-action="Index" class="app-nav-link" aria-current="@(currentController == "WorkoutPlans" ? "page" : null)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6M8.5 10h7m-7 4h7m-7 4h4"/></svg><span>Workout plans</span></a>
+                <a asp-controller="WorkoutLogs" asp-action="Index" class="app-nav-link" aria-current="@(currentController == "WorkoutLogs" ? "page" : null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8m-8 4h5"/></svg><span>Workout history</span></a>
+                <a asp-controller="Progress" asp-action="Index" class="app-nav-link" aria-current="@(currentController == "Progress" || currentController == "ProgressEntries" ? "page" : null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h17M7 15l4-4 3 2 6-7"/></svg><span>Analytics</span></a>
+            </nav>
+            <div class="sidebar-bottom">
+                <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="sidebar-logout"><span aria-hidden="true">↗</span> Sign out</button></form>
+                <div class="sidebar-footer"><span class="footer-pulse"></span> YOUR PERSONAL FITNESS SPACE</div>
             </div>
+        </aside>
+        <button id="mobile-nav-backdrop" class="mobile-nav-backdrop" type="button" aria-label="Close navigation menu" hidden></button>
+        <div class="app-main-column">
+            <header class="app-topbar">
+                <div><span class="topbar-kicker">FITNESS SPACE</span><span class="topbar-date">@DateTime.Now.ToString("dddd, MMMM d")</span></div>
+                <div class="topbar-actions">
+                    <button id="theme-toggle" class="theme-switch" type="button" aria-label="Switch to light mode" aria-pressed="false" title="Switch to light mode">
+                        <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-sun">☼</span><span class="theme-switch-moon">☾</span><span class="theme-switch-thumb"></span></span>
+                    </button>
+                </div>
+            </header>
+            <main id="main-content" role="main" class="app-page-content">@RenderBody()</main>
+            <footer class="app-footer">FITTRACK <span>·</span> BUILT AROUND YOUR GOALS</footer>
         </div>
-    </nav>
-</header>
-<div class="container app-container">
-    <main role="main" class="app-main">@RenderBody()</main>
-</div>
-@if (User.Identity?.IsAuthenticated == true)
+    </div>
+}
+else
+{
+    <header class="public-header">
+        <a class="brand-lockup" asp-controller="Home" asp-action="Index" aria-label="FitTrack home"><span class="brand-mark"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 15h4l3-8 5 14 3-8h5" /></svg></span><span>FIT<span>TRACK</span></span></a>
+        <nav aria-label="Account"><a asp-controller="Account" asp-action="Login">Sign in</a><a asp-controller="Account" asp-action="Register" class="btn btn-primary">Create account</a></nav>
+    </header>
+    <main id="main-content" role="main" class="public-main">@RenderBody()</main>
+}
+@if (useAppShell)
 {
     <aside id="fittrack-assistant" class="assistant-widget" aria-label="Fitness assistant">
-        <button id="fittrack-assistant-launcher" type="button" class="btn btn-primary assistant-launcher" aria-expanded="false" aria-controls="fittrack-assistant-panel">
+        <button id="fittrack-assistant-launcher" type="button" class="btn btn-primary assistant-launcher" aria-label="Ask your coach" aria-expanded="false" aria-controls="fittrack-assistant-panel">
             <span class="assistant-launcher-mark" aria-hidden="true">✦</span><span>Ask your coach</span>
         </button>
         <section id="fittrack-assistant-panel" class="assistant-panel" hidden aria-labelledby="fittrack-assistant-heading">
@@ -82,16 +94,23 @@
                 @Html.AntiForgeryToken()
                 <label class="visually-hidden" for="fittrack-assistant-question">Message the FitTrack coach</label>
                 <div class="assistant-composer"><textarea id="fittrack-assistant-question" name="question" class="form-control" rows="1" maxlength="2000" placeholder="Write a message…" required></textarea><button id="fittrack-assistant-send" type="submit" class="btn btn-primary" aria-label="Send message"><span aria-hidden="true">↑</span></button></div>
-                <div class="assistant-composer-hint">Enter to send · Shift + Enter for a new line</div>
+                <div class="assistant-composer-hint">AI requests may queue while another AI task runs · Enter to send · Shift + Enter for a new line</div>
             </form>
         </section>
     </aside>
+    <dialog id="app-confirm-dialog" class="app-confirm-dialog" aria-labelledby="app-confirm-title" aria-describedby="app-confirm-message">
+        <form method="dialog">
+            <div class="app-confirm-heading"><span class="app-confirm-mark" aria-hidden="true">!</span><div><p class="eyebrow">PLEASE CONFIRM</p><h2 id="app-confirm-title">Delete this item?</h2></div></div>
+            <p id="app-confirm-message" class="app-confirm-message"></p>
+            <div class="app-confirm-actions"><button type="submit" class="btn btn-outline-secondary" value="cancel">Cancel</button><button type="submit" class="btn btn-danger" value="confirm" data-confirm-accept>Delete</button></div>
+        </form>
+    </dialog>
 }
-<footer class="app-footer"><div class="container app-container d-flex flex-column flex-sm-row justify-content-between gap-2"><span>© @DateTime.Today.Year FitTrack</span><a asp-controller="Home" asp-action="Privacy">Privacy</a></div></footer>
+
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
-@if (User.Identity?.IsAuthenticated == true) { <script src="~/js/assistant.js" asp-append-version="true"></script> }
+@if (useAppShell) { <script src="~/js/assistant.js" asp-append-version="true"></script> }
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

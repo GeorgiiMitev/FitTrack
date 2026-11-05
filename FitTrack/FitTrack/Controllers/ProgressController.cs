@@ -9,7 +9,7 @@ namespace FitTrack.Controllers;
 
 public sealed class ProgressController(AppDbContext db) : Controller
 {
-    [HttpGet]
+    [HttpGet, ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<IActionResult> Index(int? year, int? month, string? date, string? measurementExercise, CancellationToken cancellationToken)
     {
         var profile = await CurrentProfileAsync(cancellationToken);

@@ -2,12 +2,15 @@ using FitTrack.Data;
 using Microsoft.EntityFrameworkCore;
 using FitTrack.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using FitTrack.Services;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
 
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envFile))
@@ -46,6 +49,29 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.ConfigureApplicationCookie(options => options.LoginPath = "/Account/Login");
+var authSessionEpoch = Guid.NewGuid().ToString("N");
+builder.Services.PostConfigure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options =>
+{
+    var existingSigningIn = options.Events.OnSigningIn;
+    var existingValidatePrincipal = options.Events.OnValidatePrincipal;
+    options.Events.OnSigningIn = async context =>
+    {
+        if (existingSigningIn is not null) await existingSigningIn(context);
+        if (context.Properties?.IsPersistent != true)
+            context.Principal?.Identities.FirstOrDefault(identity => identity.IsAuthenticated)?
+                .AddClaim(new Claim("FitTrack.AppSession", authSessionEpoch));
+    };
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        if (existingValidatePrincipal is not null) await existingValidatePrincipal(context);
+        if (context.Principal?.Identity?.IsAuthenticated != true || context.Properties?.IsPersistent == true) return;
+        if (!context.Principal.HasClaim("FitTrack.AppSession", authSessionEpoch))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        }
+    };
+});
 builder.Services.AddAuthorization(options => options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AuthorizeFilter()));
 builder.Services.AddMemoryCache();
@@ -81,6 +107,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+// Uploaded profile photos are created after publish and aren't listed in the
+// build-time static asset manifest handled by MapStaticAssets.
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
@@ -116,7 +145,6 @@ using (var scope = app.Services.CreateScope())
                 if (!result.Succeeded)
                     throw new InvalidOperationException($"Could not create the configured administrator: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
-
             if (!await userManager.IsInRoleAsync(admin, adminRole))
                 await userManager.AddToRoleAsync(admin, adminRole);
         }

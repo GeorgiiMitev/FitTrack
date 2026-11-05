@@ -47,3 +47,43 @@
 .setup-progress { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: .8rem 1rem; border: 1px solid var(--ft-line); border-radius: .75rem; color: var(--ft-muted); background: #fff; font-size: .82rem; }
 .setup-kicker { color: var(--ft-blue); font-weight: 730; letter-spacing: .08em; }
 @media (max-width: 575.98px) { .profile-summary-top { align-items: flex-start; flex-direction: column; } .profile-form-footer { align-items: stretch; flex-direction: column; } }
+
+/* Dark FitTrack profile editor */
+.profile-form-card { width:min(100%,1120px); max-width:none; margin-inline:auto; padding:clamp(1rem,2.5vw,1.6rem); border:1px solid var(--ft-border); border-radius:1rem; background:linear-gradient(145deg,rgba(13,40,43,.94),rgba(8,26,29,.96)); box-shadow:0 14px 34px rgba(0,0,0,.15); }
+.profile-form-card form > .validation-summary-valid, .profile-form-card form > .alert:empty { display:none; }
+.profile-form-section { min-width:0; margin:0 0 .9rem; padding:1.1rem; border:1px solid rgba(109,165,192,.14); border-radius:.85rem; background:rgba(5,22,26,.28); }
+.profile-form-section-heading { display:flex; align-items:flex-start; gap:.7rem; margin-bottom:.9rem; }
+.profile-form-section-heading > span { display:grid; flex:0 0 1.8rem; width:1.8rem; height:1.8rem; place-items:center; border:1px solid rgba(85,214,170,.2); border-radius:.55rem; color:#8be0c2; background:rgba(85,214,170,.07); font-size:.66rem; font-weight:750; }
+.profile-form-section-heading h2 { margin:0; color:#e9f3ef; font-size:.95rem; font-weight:680; }
+.profile-form-section-heading p { margin:.2rem 0 0; color:var(--ft-muted); font-size:.7rem; }
+.profile-basics-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem 1rem; }
+.profile-basics-grid > div { min-width:0; }
+.profile-form-card .form-label { display:block; margin-bottom:.32rem; color:#bfd0cc; font-size:.7rem; font-weight:650; }
+.profile-form-card .form-label small { margin-left:.25rem; color:#78918d; font-size:.62rem; font-weight:450; }
+.profile-form-card .form-control, .profile-form-card .form-select { min-height:2.65rem; border-color:rgba(109,165,192,.18); color:var(--ft-text); background-color:#081d20; font-size:.76rem; }
+.profile-form-card .form-control:focus, .profile-form-card .form-select:focus { border-color:rgba(85,214,170,.55); box-shadow:0 0 0 .2rem rgba(85,214,170,.1); }
+.profile-form-card .form-select option { color:#e7f1ed; background:#0a2023; }
+.profile-duration-field { position:relative; }
+.profile-duration-field .form-control { padding-right:4.6rem; }
+.profile-duration-field > span { position:absolute; top:50%; right:.75rem; color:#7f9995; font-size:.68rem; transform:translateY(-50%); pointer-events:none; }
+.profile-day-options { grid-template-columns:repeat(7,minmax(0,1fr)); gap:.5rem; }
+.profile-day-option { min-width:0; justify-content:flex-start; padding:.55rem .65rem; border-color:rgba(109,165,192,.17); border-radius:.65rem; color:#bdcfca; background:rgba(10,32,35,.72); font-size:.69rem; }
+.profile-day-option:hover, .profile-equipment-option:hover { border-color:rgba(85,214,170,.36); background:rgba(12,112,117,.12); }
+.profile-day-option:has(input:checked) { border-color:rgba(85,214,170,.5); color:#a7edd1; background:rgba(12,112,117,.2); }
+.profile-day-option input, .profile-equipment-option input { flex:0 0 auto; width:1rem; height:1rem; margin:0; accent-color:#19a88c; }
+.profile-day-option:focus-within, .profile-equipment-option:focus-within { outline:2px solid #79dfc3; outline-offset:2px; }
+.profile-equipment-groups { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; margin:.6rem 0 .2rem; }
+.profile-equipment-group { min-width:0; padding:.8rem; border-color:rgba(109,165,192,.14); border-radius:.75rem; background:linear-gradient(150deg,rgba(14,37,40,.85),rgba(8,26,29,.8)); }
+.profile-equipment-group h3 { margin:0 0 .55rem; color:#dceae6; font-size:.75rem; font-weight:680; }
+.profile-equipment-options { grid-template-columns:1fr; gap:.35rem; }
+.profile-equipment-option { min-width:0; min-height:2.35rem; gap:.5rem; padding:.4rem .55rem; border-color:rgba(109,165,192,.13); border-radius:.55rem; color:#b9cbc7; background:rgba(5,22,26,.55); font-size:.67rem; line-height:1.3; }
+.profile-equipment-option span { overflow-wrap:anywhere; }
+.profile-equipment-option:has(input:checked) { border-color:rgba(85,214,170,.48); color:#a7edd1; background:rgba(12,112,117,.19); }
+.profile-photo-section { margin-top:.9rem; padding:1rem 1.1rem; border:1px solid rgba(109,165,192,.13); border-radius:.8rem; background:rgba(5,22,26,.24); }
+.profile-photo-section .form-label { margin-bottom:.45rem; }
+.profile-form-footer { margin-top:.9rem; padding:1rem 0 0; border-color:rgba(109,165,192,.15); }
+.profile-form-footer p { margin:0; color:var(--ft-muted); font-size:.68rem; }
+.profile-form-footer .btn { min-height:2.7rem; min-width:10rem; }
+.profile-form-card .text-danger { color:#ffaaa4!important; }
+@media (max-width:900px) { .profile-day-options { grid-template-columns:repeat(4,minmax(0,1fr)); } .profile-equipment-groups { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:575.98px) { .profile-basics-grid { grid-template-columns:1fr; gap:.7rem; } .profile-day-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .profile-equipment-groups { grid-template-columns:1fr; } .profile-form-footer { align-items:stretch; } .profile-form-footer .btn { width:100%; } }

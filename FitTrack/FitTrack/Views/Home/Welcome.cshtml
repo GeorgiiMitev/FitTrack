@@ -1,11 +1,37 @@
-@{ ViewData["Title"] = "Welcome"; }
-<section class="welcome-panel">
-    <div class="welcome-card">
-        <div class="welcome-mark" aria-hidden="true">F</div>
-        <span class="eyebrow">YOUR TRAINING, IN ONE PLACE</span>
-        <h1>Make room for progress.</h1>
-        <p class="lead">Build a routine around your goals, equipment, and schedule. Keep your workouts and progress together, one session at a time.</p>
-        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2"><a class="btn btn-primary btn-lg" asp-controller="Account" asp-action="Register">Create your account</a><a class="btn btn-outline-primary btn-lg" asp-controller="Account" asp-action="Login">Log in</a></div>
-        <div class="welcome-points"><span>Plan with purpose</span><span>Keep a clear history</span><span>See your consistency</span></div>
-    </div>
-</section>
+@{ ViewData["Title"] = "Welcome to FitTrack"; }
+<div class="welcome-page">
+    <section class="welcome-hero" aria-labelledby="welcome-title">
+        <div class="welcome-hero-copy">
+            <p class="welcome-eyebrow"><span></span> YOUR FITNESS. YOUR RHYTHM.</p>
+            <h1 id="welcome-title">Make your next<br /><span>move count.</span></h1>
+            <p class="welcome-lede">A clearer way to plan your workouts, build consistency, and see how far you’ve come.</p>
+            <div class="welcome-actions">
+                <a class="btn btn-primary welcome-primary-action" asp-controller="Account" asp-action="Register">Let’s start <span aria-hidden="true">↗</span></a>
+                <a class="welcome-signin-link" asp-controller="Account" asp-action="Login">Already have an account? <strong>Sign in</strong></a>
+            </div>
+            <div class="welcome-feature-line" aria-label="FitTrack features">
+                <span><i aria-hidden="true">✓</i> Plans around your goals</span>
+                <span><i aria-hidden="true">✓</i> Progress you can see</span>
+            </div>
+        </div>
+        <div class="welcome-visual" aria-hidden="true">
+            <div class="welcome-visual-grid"></div>
+            <div class="welcome-halo welcome-halo-outer"></div>
+            <div class="welcome-halo welcome-halo-inner"></div>
+            <div class="welcome-energy-line"></div>
+            <div class="welcome-emblem">
+                <svg viewBox="0 0 100 100" focusable="false"><path d="M19 38v24m-9-19v14m18-21v28m44-26v24m18-19v14m-9-21v28M28 50h44"/><circle cx="50" cy="50" r="43" class="emblem-ring"/></svg>
+            </div>
+            <div class="welcome-glass-card welcome-card-top"><span class="welcome-card-icon">✦</span><div><small>YOUR TRAINING PLAN</small><strong>Built around you</strong></div><span class="welcome-card-arrow" aria-hidden="true">↗</span></div>
+            <div class="welcome-glass-card welcome-card-bottom"><span class="welcome-pulse-icon"><i></i></span><div><small>YOUR NEXT STEP</small><strong>Start with your goal</strong></div><span class="welcome-card-arrow" aria-hidden="true">→</span></div>
+            <span class="welcome-orbit-dot welcome-dot-one"></span><span class="welcome-orbit-dot welcome-dot-two"></span>
+        </div>
+    </section>
+
+    <section class="welcome-benefits" aria-label="What you can do with FitTrack">
+        <article><span>01</span><div><h2>Find your focus</h2><p>Set your goal, experience level, and preferred training days.</p></div><b aria-hidden="true">↗</b></article>
+        <article><span>02</span><div><h2>Build your routine</h2><p>Choose exercises and make a plan that fits your equipment.</p></div><b aria-hidden="true">↗</b></article>
+        <article><span>03</span><div><h2>Keep your progress</h2><p>Log sessions and look back at the work you’ve put in.</p></div><b aria-hidden="true">↗</b></article>
+    </section>
+    <p class="welcome-footer-note">A better routine starts with one small step.</p>
+</div>

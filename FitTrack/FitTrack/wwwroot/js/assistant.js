@@ -10,20 +10,58 @@
 
     const scrollToLatest = () => { messagesElement.scrollTop = messagesElement.scrollHeight; };
 
-    const renderCoachText = (element, text) => {
-        const markup = /\*\*([^*\n]+)\*\*|##/g;
-        let lastIndex = 0;
-        for (const match of text.matchAll(markup)) {
-            const index = match.index;
-            if (index > lastIndex) element.append(document.createTextNode(text.slice(lastIndex, index)));
-            if (match[1]) {
-                const strong = document.createElement('strong');
-                strong.textContent = match[1];
-                element.append(strong);
-            }
-            lastIndex = index + match[0].length;
+    // Render the small Markdown subset used by AI replies using DOM nodes only.
+    // This keeps model output readable without treating it as trusted HTML.
+    const appendInlineMarkdown = (parent, text) => {
+        const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+        let cursor = 0;
+        for (const match of text.matchAll(pattern)) {
+            if (match.index > cursor) parent.append(document.createTextNode(text.slice(cursor, match.index)));
+            const token = match[0];
+            const element = document.createElement(token.startsWith('**') ? 'strong' : token.startsWith('`') ? 'code' : 'em');
+            element.textContent = token.startsWith('**') ? token.slice(2, -2) : token.slice(1, -1);
+            parent.append(element);
+            cursor = match.index + token.length;
         }
-        if (lastIndex < text.length) element.append(document.createTextNode(text.slice(lastIndex)));
+        if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
+    };
+
+    const renderMarkdown = (container, markdown) => {
+        const lines = String(markdown ?? '').replace(/```[\s\S]*?```/g, block => block.slice(3, -3).trim()).split(/\r?\n/);
+        let list = null;
+        const closeList = () => { list = null; };
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) { closeList(); continue; }
+            const heading = line.match(/^(#{1,4})\s+(.+)$/);
+            if (heading) {
+                closeList();
+                const title = document.createElement(`h${Math.min(heading[1].length + 2, 6)}`);
+                title.className = 'assistant-markdown-heading';
+                appendInlineMarkdown(title, heading[2]);
+                container.append(title);
+                continue;
+            }
+            const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+            const unordered = line.match(/^[-*]\s+(.+)$/);
+            if (ordered || unordered) {
+                const tag = ordered ? 'ol' : 'ul';
+                if (!list || list.tagName.toLowerCase() !== tag) {
+                    closeList();
+                    list = document.createElement(tag);
+                    list.className = 'assistant-markdown-list';
+                    container.append(list);
+                }
+                const item = document.createElement('li');
+                appendInlineMarkdown(item, (ordered || unordered)[1]);
+                list.append(item);
+                continue;
+            }
+            closeList();
+            const paragraph = document.createElement('p');
+            appendInlineMarkdown(paragraph, line.replace(/\s{2,}$/g, ''));
+            container.append(paragraph);
+        }
     };
 
     const addMessage = (speaker, text, state = '') => {
@@ -47,9 +85,9 @@
             bubble.append(label);
         }
 
-        const body = document.createElement('p');
+        const body = document.createElement('div');
         body.className = 'assistant-message-text';
-        if (speaker === 'coach' && state !== 'error') renderCoachText(body, text);
+        if (speaker === 'coach' && state !== 'error' && state !== 'typing') renderMarkdown(body, text);
         else body.textContent = text;
         bubble.append(body);
 

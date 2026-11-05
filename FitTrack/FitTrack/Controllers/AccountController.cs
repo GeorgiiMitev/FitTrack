@@ -20,28 +20,32 @@ public class AccountController : Controller
         _db = db;
     }
 
-    [AllowAnonymous, HttpGet]
-    public IActionResult Register() => View();
+    [AllowAnonymous, HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public IActionResult Register() => User.Identity?.IsAuthenticated == true
+        ? RedirectToAction("Dashboard", "Home")
+        : View();
 
     [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
+        model.UserName = CapitalizeFirst((model.UserName ?? string.Empty).Trim());
         if (!ModelState.IsValid) return View(model);
         var user = new ApplicationUser { UserName = model.UserName, Email = model.Email };
         var result = await _userManager.CreateAsync(user, model.Password);
         if (result.Succeeded)
         {
             await EnsureProfileAsync(user);
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
             return RedirectToAction("Setup", "UserProfiles");
         }
         foreach (var error in result.Errors) ModelState.AddModelError(string.Empty, error.Description);
         return View(model);
     }
 
-    [AllowAnonymous, HttpGet]
+    [AllowAnonymous, HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public IActionResult Login(string? returnUrl = null)
     {
+        if (User.Identity?.IsAuthenticated == true) return RedirectToAction("Dashboard", "Home");
         ViewData["ReturnUrl"] = returnUrl;
         return View();
     }
@@ -51,16 +55,17 @@ public class AccountController : Controller
     {
         ViewData["ReturnUrl"] = returnUrl;
         if (!ModelState.IsValid) return View(model);
-        var result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
+        var loginIdentifier = model.UserName.Trim();
+        var user = await _userManager.FindByNameAsync(loginIdentifier)
+            ?? await _userManager.FindByEmailAsync(loginIdentifier);
+        var result = user?.UserName is not null
+            ? await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true)
+            : Microsoft.AspNetCore.Identity.SignInResult.Failed;
         if (result.Succeeded)
         {
-            var user = await _userManager.FindByNameAsync(model.UserName);
-            if (user is not null)
-            {
-                var profile = await EnsureProfileAsync(user);
-                if (!profile.SetupCompleted) return RedirectToAction("Setup", "UserProfiles");
-            }
-            return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToAction("Index", "Home");
+            var profile = await EnsureProfileAsync(user!);
+            if (!profile.SetupCompleted) return RedirectToAction("Setup", "UserProfiles");
+            return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToAction("Dashboard", "Home");
         }
         ModelState.AddModelError(string.Empty, "Invalid login attempt.");
         return View(model);
@@ -91,4 +96,8 @@ public class AccountController : Controller
         await _db.SaveChangesAsync();
         return profile;
     }
+
+    private static string CapitalizeFirst(string value) => string.IsNullOrWhiteSpace(value)
+        ? value
+        : char.ToUpperInvariant(value[0]) + value[1..];
 }

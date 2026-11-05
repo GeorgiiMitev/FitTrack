@@ -12,6 +12,7 @@ public class RegisterViewModel
     public string Password { get; set; } = string.Empty;
     [Required, DataType(DataType.Password), Compare(nameof(Password))]
     public string ConfirmPassword { get; set; } = string.Empty;
+    public bool RememberMe { get; set; }
 }
 
 public class LoginViewModel

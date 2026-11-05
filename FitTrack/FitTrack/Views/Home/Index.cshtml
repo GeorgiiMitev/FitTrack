@@ -1,57 +1,105 @@
 @model FitTrack.Models.DashboardViewModel
-@{ ViewData["Title"] = "Overview"; }
-<header class="page-header">
-    <div class="page-header-copy"><span class="eyebrow">YOUR TRAINING SPACE</span><h1>Good to see you, @Model.Profile.Name</h1><p>Small, steady sessions add up. Here’s how your training is going.</p></div>
-    <div class="page-actions"><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Index">View my plans</a><a class="btn btn-outline-primary" asp-controller="Progress" asp-action="Index">See progress</a></div>
-</header>
+@using System.Globalization
+@{
+    ViewData["Title"] = "Dashboard";
+    var maxWeeklyWorkouts = Math.Max(1, Model.WeeklyActivity.Select(point => point.Workouts).DefaultIfEmpty().Max());
+    var profileName = Model.Profile.Name;
+    if (!string.IsNullOrEmpty(profileName)) profileName = char.ToUpperInvariant(profileName[0]) + profileName[1..];
+}
+<div class="dashboard-page">
+    <section class="dashboard-welcome mb-4">
+        <div>
+            <p class="eyebrow">@DateTime.Today.ToString("dddd, MMMM d") · YOUR FITNESS SPACE</p>
+            <h1>Welcome back, @profileName</h1>
+            <p class="mb-0">Keep your next workout moving you toward <strong>@Model.Profile.Goal</strong>.</p>
+        </div>
+        <a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Index">Explore your plans <span aria-hidden="true">↗</span></a>
+    </section>
 
-<section class="row g-3 mb-4" aria-label="Training summary">
-    <div class="col-6 col-lg-4"><article class="stat-card"><span class="stat-label">Workouts this week</span><strong class="stat-value">@Model.CompletedWorkoutsThisWeek</strong><span class="stat-detail">Completed sessions</span></article></div>
-    <div class="col-6 col-lg-4"><article class="stat-card"><span class="stat-label">Active days this month</span><strong class="stat-value">@Model.ActiveDaysThisMonth</strong><span class="stat-detail">Days you moved</span></article></div>
-    <div class="col-12 col-lg-4"><article class="stat-card"><span class="stat-label">Current goal</span><strong class="stat-value fs-4">@Model.Profile.Goal</strong><span class="stat-detail">@Model.Profile.ExperienceLevel · @Model.Profile.SessionDurationMinutes min sessions</span></article></div>
-</section>
+    <section class="row g-3 mb-4" aria-label="Fitness summary">
+        <div class="col-sm-6 col-xl-4"><article class="dashboard-stat-card">
+            <div class="stat-icon" aria-hidden="true">↗</div><p class="stat-label">Sessions this week</p><strong class="stat-value">@Model.CompletedWorkoutsThisWeek</strong><p class="stat-footnote">Saved workout sessions</p>
+        </article></div>
+        <div class="col-sm-6 col-xl-4"><article class="dashboard-stat-card">
+            <div class="stat-icon" aria-hidden="true">◷</div><p class="stat-label">Active days this month</p><strong class="stat-value">@Model.ActiveDaysThisMonth</strong><p class="stat-footnote">Days with completed training</p>
+        </article></div>
+        <div class="col-sm-6 col-xl-4"><article class="dashboard-stat-card dashboard-stat-featured">
+            <div class="stat-icon" aria-hidden="true">◎</div><p class="stat-label">Your training focus</p><strong class="stat-value stat-value-text">@Model.Profile.Goal</strong><p class="stat-footnote">@Model.Profile.ExperienceLevel · @Model.Profile.SessionDurationMinutes min sessions</p>
+        </article></div>
+    </section>
 
-<div class="row g-3 align-items-stretch">
-    <div class="col-12 col-xl-7">
-        <section class="app-card h-100" aria-labelledby="active-plan-heading">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                <div><span class="eyebrow">YOUR ROUTINE</span><h2 id="active-plan-heading" class="h4 mb-1">Active plan</h2><p class="text-secondary mb-0">A clear next step for your next session.</p></div>
-                @if (Model.ActivePlan is not null) { <span class="badge-soft badge-success-soft">Active</span> }
-            </div>
-            @if (Model.ActivePlan is null)
-            {
-                <div class="empty-state mt-4"><div class="empty-state-mark" aria-hidden="true">＋</div><h3>No active plan yet</h3><p>Choose exercises that suit your equipment, or ask FitTrack to build a starting point around your profile.</p><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Index">Create a workout plan</a></div>
-            }
-            else
-            {
-                <div class="active-plan-summary mt-4">
-                    <div class="active-plan-copy"><span class="badge-soft mb-2">@(Model.ActivePlan.IsAiGenerated ? "AI plan" : "Manual plan")</span><h3 class="h3 mb-1">@Model.ActivePlan.Name</h3><p class="text-secondary mb-0">@Model.ActivePlan.Goal · @Model.ActivePlan.PlanExercises.Count exercises</p></div>
-                    <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Complete" asp-route-id="@Model.ActivePlan.Id">Log a workout</a><a class="btn btn-outline-primary" asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@Model.ActivePlan.Id">View plan</a></div>
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <section class="dashboard-panel mb-3" aria-labelledby="activity-heading">
+                <div class="panel-heading">
+                    <div><p class="eyebrow">BUILD YOUR RHYTHM</p><h2 id="activity-heading">Weekly activity</h2></div>
+                    <a class="panel-link" asp-controller="Progress" asp-action="Index">View progress <span aria-hidden="true">→</span></a>
                 </div>
-            }
-        </section>
-    </div>
-    <div class="col-12 col-xl-5">
-        <section class="app-card h-100" aria-labelledby="recent-heading">
-            <div class="section-heading mt-0"><div><h2 id="recent-heading">Recent activity</h2><p>Your latest saved exercise entries</p></div><a class="small fw-semibold" asp-controller="WorkoutLogs" asp-action="Index">Full history</a></div>
-            @if (Model.RecentWorkouts.Count == 0)
-            {
-                <div class="empty-state mt-3"><div class="empty-state-mark" aria-hidden="true">↗</div><h3>Your history starts here</h3><p>Log a session to see your training come together.</p><a class="btn btn-sm btn-outline-primary" asp-controller="WorkoutLogs" asp-action="Create">Log an exercise</a></div>
-            }
-            else
-            {
-                <ul class="activity-list list-unstyled mb-0">
-                @foreach (var log in Model.RecentWorkouts)
+                <p class="panel-description">Workout sessions from your saved training log over the last eight weeks.</p>
+                <div class="activity-chart" role="img" aria-label="Bar chart of logged workouts for the past eight weeks">
+                    @foreach (var point in Model.WeeklyActivity)
+                    {
+                        var barHeight = point.Workouts == 0 ? 5 : Math.Max(16, point.Workouts / (double)maxWeeklyWorkouts * 142);
+                        <div class="activity-chart-column" title="@point.Workouts sessions · week of @point.WeekStarting.ToString("MMM d")">
+                            <span class="activity-chart-count">@point.Workouts</span>
+                            <span class="activity-chart-bar" style="height:@(barHeight.ToString("0", CultureInfo.InvariantCulture))px"></span>
+                            <span class="activity-chart-label">@point.WeekStarting.ToString("MM/dd")</span>
+                        </div>
+                    }
+                </div>
+                <div class="chart-legend"><span class="legend-dot"></span> Completed workouts <span class="legend-caption">· counted from your workout history</span></div>
+            </section>
+
+            <section class="dashboard-panel" aria-labelledby="recent-heading">
+                <div class="panel-heading"><div><p class="eyebrow">YOUR TRAINING LOG</p><h2 id="recent-heading">Recent activity</h2></div><a class="panel-link" asp-controller="WorkoutLogs" asp-action="Index">Full history <span aria-hidden="true">→</span></a></div>
+                @if (Model.RecentWorkouts.Count == 0)
                 {
-                    <li class="activity-item"><span class="activity-marker" aria-hidden="true"></span><div class="activity-copy"><strong>@log.ExerciseName</strong><span>@log.SetsCompleted sets × @log.RepetitionsCompleted reps · @log.WeightUsed kg</span></div><time datetime="@log.CompletedAt.ToString("O")">@log.CompletedAt.ToLocalTime().ToString("MMM d")</time></li>
+                    <div class="dashboard-empty"><p>No workouts logged yet.</p><a asp-controller="WorkoutLogs" asp-action="Create">Log your first workout</a></div>
                 }
-                </ul>
-            }
-        </section>
+                else
+                {
+                    <div class="recent-activity-list">
+                    @foreach (var log in Model.RecentWorkouts)
+                    {
+                        <article class="recent-activity-item">
+                            <span class="activity-marker" aria-hidden="true">✓</span>
+                            <div class="activity-entry-main"><strong>@log.ExerciseName</strong><span>@(log.WorkoutPlan?.Name ?? "Workout session")</span></div>
+                            <div class="activity-entry-result">@log.SetsCompleted × @log.RepetitionsCompleted <span>sets × reps</span></div>
+                            <time datetime="@log.CompletedAt.ToString("O")">@log.CompletedAt.ToLocalTime().ToString("MMM d")</time>
+                        </article>
+                    }
+                    </div>
+                }
+            </section>
+        </div>
+
+        <div class="col-xl-4">
+            <section class="dashboard-panel active-plan-panel mb-3" aria-labelledby="plan-heading">
+                <div class="panel-heading"><div><p class="eyebrow">STAY ON TRACK</p><h2 id="plan-heading">Your active plan</h2></div><span class="status-pill">@(Model.ActivePlan is null ? "No plan" : "Active")</span></div>
+                @if (Model.ActivePlan is null)
+                {
+                    <div class="dashboard-empty"><p>Choose a plan that fits your current goal and equipment.</p><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Index">Find a plan</a></div>
+                }
+                else
+                {
+                    <p class="active-plan-name">@Model.ActivePlan.Name</p>
+                    <p class="panel-description">@Model.ActivePlan.Goal · @Model.ActivePlan.PlanExercises.Count exercises</p>
+                    <div class="plan-exercise-list">
+                    @foreach (var exercise in Model.ActivePlan.PlanExercises.OrderBy(item => item.DayOfTheWeek).Take(5))
+                    {
+                        <div class="plan-exercise-item"><span class="plan-exercise-day">@(((DayOfWeek)exercise.DayOfTheWeek).ToString()[..3])</span><span>@exercise.ExerciseName</span><span class="plan-exercise-dose">@exercise.Sets × @exercise.Repetitions</span></div>
+                    }
+                    </div>
+                    <a class="btn btn-primary w-100 mt-3" asp-controller="WorkoutPlans" asp-action="Complete" asp-route-id="@Model.ActivePlan.Id">Log this workout</a>
+                }
+            </section>
+
+            <section class="dashboard-panel dashboard-shortcuts" aria-labelledby="shortcuts-heading">
+                <p class="eyebrow">KEEP MOVING</p><h2 id="shortcuts-heading">Quick access</h2>
+                <a asp-controller="ExerciseLibrary" asp-action="Index"><span class="shortcut-icon">＋</span><span><strong>Exercise library</strong><small>Find your next movement</small></span><span aria-hidden="true">→</span></a>
+                <a asp-controller="Progress" asp-action="Index"><span class="shortcut-icon">⌁</span><span><strong>Progress tracking</strong><small>Review your consistency</small></span><span aria-hidden="true">→</span></a>
+                <a asp-controller="UserProfiles" asp-action="Edit"><span class="shortcut-icon">◎</span><span><strong>Training preferences</strong><small>Update your fitness profile</small></span><span aria-hidden="true">→</span></a>
+            </section>
+        </div>
     </div>
 </div>
-
-<section class="quick-links mt-4" aria-label="Explore FitTrack">
-    <a class="quick-link-card" asp-controller="ExerciseLibrary" asp-action="Index"><span class="quick-link-mark" aria-hidden="true">⌕</span><span><strong>Find an exercise</strong><small>Browse by muscle, category, or equipment</small></span><span class="quick-link-arrow" aria-hidden="true">→</span></a>
-    <a class="quick-link-card" asp-controller="UserProfiles" asp-action="Index"><span class="quick-link-mark" aria-hidden="true">◉</span><span><strong>Update your profile</strong><small>Keep your goals and equipment current</small></span><span class="quick-link-arrow" aria-hidden="true">→</span></a>
-</section>

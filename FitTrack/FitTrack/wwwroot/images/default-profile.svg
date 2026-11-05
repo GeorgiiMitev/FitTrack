@@ -1,5 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Default profile image">
-  <rect width="128" height="128" rx="64" fill="#e9ecef"/>
-  <circle cx="64" cy="46" r="23" fill="#89939e"/>
-  <path d="M20 119c3-25 20-39 44-39s41 14 44 39" fill="#89939e"/>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#15565a"/>
+      <stop offset="1" stop-color="#092b30"/>
+    </linearGradient>
+    <linearGradient id="figure" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#9cead7"/>
+      <stop offset="1" stop-color="#44b99d"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="64" fill="url(#background)"/>
+  <circle cx="64" cy="45" r="22" fill="url(#figure)"/>
+  <path d="M18 121c4-25 21-40 46-40s42 15 46 40" fill="url(#figure)"/>
 </svg>

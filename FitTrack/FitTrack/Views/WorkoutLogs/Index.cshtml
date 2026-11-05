@@ -20,10 +20,10 @@
 }
 else
 {
-    <div class="table-responsive"><table class="table table-hover"><thead><tr><th>Date</th><th>Exercise</th><th>Plan</th><th>Sets × reps</th><th>Weight</th><th>Notes</th><th><span class="visually-hidden">Actions</span></th></tr></thead><tbody>
+    <div class="table-responsive history-table"><table class="table table-hover" data-mobile-accordion><thead><tr><th>Date</th><th>Exercise</th><th>Plan</th><th>Sets × reps</th><th>Weight</th><th>Notes</th><th><span class="visually-hidden">Actions</span></th></tr></thead><tbody>
     @foreach (var log in Model.Logs)
     {
-        <tr><td class="text-nowrap">@log.CompletedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")</td><td class="fw-semibold">@log.ExerciseName</td><td>@(log.WorkoutPlan?.Name ?? "Individual entry")</td><td>@log.SetsCompleted × @log.RepetitionsCompleted</td><td>@log.WeightUsed kg</td><td class="history-notes">@(string.IsNullOrWhiteSpace(log.Notes) ? "—" : log.Notes)</td><td><div class="table-actions"><a class="btn btn-sm btn-light" asp-action="Details" asp-route-id="@log.Id">Details</a><form asp-action="Delete" asp-route-id="@log.Id" method="post" data-confirm="Delete the @log.ExerciseName entry from your history?"><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form></div></td></tr>
+        <tr data-mobile-summary="@log.ExerciseName"><td class="text-nowrap" data-label="Date">@log.CompletedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")</td><td class="fw-semibold" data-label="Exercise">@log.ExerciseName</td><td data-label="Plan">@(log.WorkoutPlan?.Name ?? "Individual entry")</td><td data-label="Sets × reps">@log.SetsCompleted × @log.RepetitionsCompleted</td><td data-label="Weight">@log.WeightUsed kg</td><td class="history-notes" data-label="Notes">@(string.IsNullOrWhiteSpace(log.Notes) ? "—" : log.Notes)</td><td data-label="Actions"><div class="table-actions"><a class="btn btn-sm btn-light" asp-action="Details" asp-route-id="@log.Id">Details</a><form asp-action="Delete" asp-route-id="@log.Id" method="post" data-confirm="Delete the @log.ExerciseName entry from your history?"><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form></div></td></tr>
     }
     </tbody></table></div>
     @if (Model.PageCount > 1)

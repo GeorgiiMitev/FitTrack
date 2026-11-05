@@ -17,7 +17,7 @@ AI features are optional; the exercise library, plans, workout log, profile, and
 
 To configure Gemini, copy `.env.example` to `.env` in this project folder and replace `your_gemini_api_key_here` with a key from Google AI Studio. Keep `.env` private and never put a key in frontend code. The application loads environment variables without overwriting values already set in the process. Gemini is selected when `GEMINI_API_KEY` is configured; otherwise the app uses `OPENAI_API_KEY` if available. Model names can be overridden with `GEMINI_MODEL` or `OPENAI_MODEL`.
 
-Gemini uses Google's OpenAI-compatible Chat Completions endpoint. HTTP 503 responses are retried up to four times with increasing delays; if the service remains unavailable, FitTrack reports a temporary provider outage without affecting saved data. The app log records the provider's error code and message to help distinguish overload from configuration problems. HTTP 429 is reported as a provider quota/rate limit issue. See Google's [OpenAI compatibility guide](https://ai.google.dev/gemini-api/docs/openai/) and [troubleshooting guide](https://ai.google.dev/gemini-api/docs/troubleshooting).
+Gemini uses Google's OpenAI-compatible Chat Completions endpoint. A temporary HTTP 503 is retried with a short backoff; if the service remains unavailable, FitTrack shows a retry-later message without affecting saved data. HTTP 429 is reported as a provider quota/rate limit issue. See Google's [OpenAI compatibility guide](https://ai.google.dev/gemini-api/docs/openai/).
 
 ## Exercise catalog
 

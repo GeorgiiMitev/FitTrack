@@ -40,6 +40,11 @@ public sealed class ExerciseLibraryViewModel
 public sealed class ManualPlanViewModel
 {
     public string? Search { get; set; }
+    public bool ShowAllExercises { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 12;
+    public int TotalItems { get; set; }
+    public int PageCount => Math.Max(1, (int)Math.Ceiling(TotalItems / (double)PageSize));
     [Required, StringLength(80)] public string PlanName { get; set; } = "My workout plan";
     [Required, StringLength(80)] public string Goal { get; set; } = string.Empty;
     [MinLength(1, ErrorMessage = "Select at least one exercise.")] public List<int> ExerciseIds { get; set; } = new();
@@ -103,6 +108,7 @@ public sealed class DashboardViewModel
     public UserProfile Profile { get; set; } = new();
     public WorkoutPlan? ActivePlan { get; set; }
     public List<WorkoutLog> RecentWorkouts { get; set; } = new();
+    public List<WeeklyProgressPoint> WeeklyActivity { get; set; } = new();
     public int CompletedWorkoutsThisWeek { get; set; }
     public int ActiveDaysThisMonth { get; set; }
 }

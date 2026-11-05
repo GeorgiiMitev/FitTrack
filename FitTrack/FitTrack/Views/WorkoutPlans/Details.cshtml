@@ -1,32 +1,47 @@
 @model FitTrack.Models.WorkoutPlan
 @{ ViewData["Title"] = Model.Name; var trainingDays = Model.PlanExercises.OrderBy(item => item.DayOfTheWeek).GroupBy(item => item.DayOfTheWeek).ToList(); }
-<header class="page-header">
-    <div class="page-header-copy"><a class="back-link" asp-action="Index">← All plans</a><div class="mt-3"><span class="badge-soft @(Model.IsActive ? "badge-success-soft" : "badge-muted")">@(Model.IsActive ? "Active plan" : "Saved plan")</span><span class="badge-soft ms-1">@(Model.IsAiGenerated ? "AI-generated" : "Manual")</span></div><h1 class="mt-2">@Model.Name</h1><p>@Model.Goal · Created @Model.CreatedAt.ToLocalTime().ToString("MMMM d, yyyy")</p></div>
-    <div class="page-actions">
+<div class="plan-detail-page">
+<a class="back-link" asp-action="Index">← All workout plans</a>
+<header class="plan-detail-header">
+    <div class="plan-detail-title">
+        <div class="plan-detail-badges"><span class="badge-soft @(Model.IsActive ? "badge-success-soft" : "badge-muted")">@(Model.IsActive ? "Active plan" : "Saved plan")</span><span class="badge-soft">@(Model.IsAiGenerated ? "AI-generated" : "Manual")</span></div>
+        <h1>@Model.Name</h1>
+        <p class="plan-detail-subtitle">@Model.Goal <span aria-hidden="true">·</span> Created @Model.CreatedAt.ToLocalTime().ToString("MMMM d, yyyy")</p>
+    </div>
+    <div class="plan-detail-actions">
         @if (Model.IsActive) { <a class="btn btn-primary" asp-action="Complete" asp-route-id="@Model.Id">Log a workout</a> }
         else { <form asp-action="Activate" asp-route-id="@Model.Id" method="post" data-loading data-loading-label="Activating…"><button class="btn btn-primary" type="submit">Activate this plan</button></form> }
         <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="Delete ‘@Model.Name’? This won’t remove workout history."><button class="btn btn-outline-danger" type="submit">Delete plan</button></form>
     </div>
 </header>
-<div class="plan-overview-stats row g-3 mb-4">
-    <div class="col-6 col-lg-4"><div class="stat-card"><span class="stat-label">Training days</span><strong class="stat-value">@trainingDays.Count</strong></div></div>
-    <div class="col-6 col-lg-4"><div class="stat-card"><span class="stat-label">Exercises</span><strong class="stat-value">@Model.PlanExercises.Count</strong></div></div>
-    <div class="col-12 col-lg-4"><div class="stat-card"><span class="stat-label">Plan type</span><strong class="stat-value fs-4">@(Model.IsAiGenerated ? "AI draft" : "Manual")</strong></div></div>
-</div>
+<section class="plan-detail-stats" aria-label="Plan summary">
+    <article><span>Training days</span><strong>@trainingDays.Count</strong><small>per week</small></article>
+    <article><span>Exercises</span><strong>@Model.PlanExercises.Count</strong><small>in this plan</small></article>
+    <article><span>Plan type</span><strong class="plan-stat-type">@(Model.IsAiGenerated ? "AI draft" : "Manual")</strong><small>@(Model.IsAiGenerated ? "Generated from your profile" : "Created by you")</small></article>
+</section>
+<div class="plan-schedule-heading"><div><p class="eyebrow">YOUR ROUTINE</p><h2>Weekly schedule</h2><p>Exercises, sets, repetitions, and rest for each training day.</p></div><a class="btn btn-outline-primary btn-sm" asp-controller="PlanExercises" asp-action="Index">View all planned exercises</a></div>
 @if (trainingDays.Count == 0)
 {
     <div class="empty-state"><h2>This plan has no exercises yet</h2><p>Add exercises by creating another plan from your exercise library.</p></div>
 }
 else
 {
-    <div class="row g-3">
+    <div class="plan-day-grid">
     @foreach (var day in trainingDays)
     {
-        <div class="col-12 col-lg-6"><section class="app-card h-100"><div class="day-card-heading"><span class="day-number">@day.Count()</span><div><span class="eyebrow">TRAINING DAY</span><h2 class="h5 mb-0">@((DayOfWeek)day.Key)</h2></div></div><ol class="prescription-list mb-0">
-            @foreach (var exercise in day) { <li><div><a asp-controller="PlanExercises" asp-action="Details" asp-route-id="@exercise.Id"><strong>@exercise.ExerciseName</strong></a><span>@exercise.Sets sets × @exercise.Repetitions reps</span></div><small>@exercise.RestSeconds sec rest</small></li> }
-        </ol></section></div>
+        <section class="plan-day-card">
+            <header class="plan-day-card-header"><div><span class="eyebrow">TRAINING DAY</span><h3>@((DayOfWeek)day.Key)</h3></div><span class="plan-day-count">@day.Count() <small>exercises</small></span></header>
+            @{ var exerciseIndex = 0; }
+            <ol class="plan-exercise-list">
+            @foreach (var exercise in day)
+            {
+                exerciseIndex++;
+                <li><div class="plan-exercise-main"><span class="plan-exercise-index">@exerciseIndex</span><a asp-controller="PlanExercises" asp-action="Details" asp-route-id="@exercise.Id">@exercise.ExerciseName</a></div><div class="plan-exercise-meta"><span>@exercise.Sets sets <i>×</i> @exercise.Repetitions reps</span><span>@exercise.RestSeconds sec rest</span></div></li>
+            }
+            </ol>
+        </section>
     }
     </div>
-    <p class="text-center mt-3"><a class="btn btn-light btn-sm" asp-controller="PlanExercises" asp-action="Index">Browse exercises in all plans</a></p>
 }
 @if (TempData["WorkoutSaved"] is string message) { <div class="alert alert-success mt-4" role="status">@message</div> }
+</div>

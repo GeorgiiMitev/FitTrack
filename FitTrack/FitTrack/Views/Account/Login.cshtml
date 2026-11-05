@@ -1,16 +1,20 @@
 @model FitTrack.Models.LoginViewModel
-@{ ViewData["Title"] = "Log in"; }
-<div class="account-page">
-    <section class="account-card border-0 shadow-lg">
-        <div class="text-center mb-4"><span class="badge text-bg-primary rounded-pill mb-2">FITTRACK</span><h1 class="h2 mb-2">Welcome back</h1><p class="text-secondary mb-0">Log in to continue your training.</p></div>
-        <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" data-loading data-loading-label="Signing in…">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-            <div class="mb-3"><label asp-for="UserName" class="form-label">Username</label><input asp-for="UserName" class="form-control form-control-lg" autocomplete="username" placeholder="Your username" /><span asp-validation-for="UserName" class="text-danger small"></span></div>
-            <div class="mb-3"><label asp-for="Password" class="form-label">Password</label><input asp-for="Password" class="form-control form-control-lg" autocomplete="current-password" /><span asp-validation-for="Password" class="text-danger small"></span></div>
-            <div class="form-check mb-4"><input asp-for="RememberMe" class="form-check-input" /><label asp-for="RememberMe" class="form-check-label">Keep me signed in</label></div>
-            <button type="submit" class="btn btn-primary btn-lg w-100">Log in</button>
+@{ ViewData["Title"] = "Sign in"; }
+<section class="auth-layout auth-login" aria-labelledby="auth-heading">
+    <section class="account-card auth-card">
+        <div class="auth-mark" aria-hidden="true"><span>F</span>T</div>
+        <p class="auth-card-kicker">GOOD TO SEE YOU AGAIN</p>
+        <h2 id="auth-heading">Sign in</h2>
+        <p class="auth-card-description">Enter your account details to continue your training.</p>
+        <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+            <div asp-validation-summary="ModelOnly" class="auth-validation text-danger mb-3"></div>
+            <div class="auth-field"><label asp-for="UserName" class="form-label">Username or email</label><input asp-for="UserName" class="form-control" autocomplete="username" placeholder="Your username or email address" /><span asp-validation-for="UserName" class="text-danger"></span></div>
+            <div class="auth-field"><label asp-for="Password" class="form-label">Password</label><input asp-for="Password" class="form-control" autocomplete="current-password" placeholder="Your password" /><span asp-validation-for="Password" class="text-danger"></span></div>
+            <div class="auth-remember-row"><input asp-for="RememberMe" class="form-check-input auth-remember-input" /><label asp-for="RememberMe" class="form-check-label auth-remember-label">Remember me</label></div>
+            <button type="submit" class="btn btn-primary auth-submit">Sign in <span aria-hidden="true">↗</span></button>
         </form>
-        <p class="text-center mt-4 mb-0">New to FitTrack? <a asp-action="Register">Create an account</a></p>
+        <p class="auth-card-switch">New to FitTrack? <a asp-action="Register">Create an account</a></p>
+        <div class="auth-secure-note"><span aria-hidden="true">◆</span> Your training data stays linked to your account.</div>
     </section>
-</div>
+</section>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

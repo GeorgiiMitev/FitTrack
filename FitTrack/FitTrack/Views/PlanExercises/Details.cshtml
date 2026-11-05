@@ -1,4 +1,16 @@
 @model FitTrack.Models.PlanExercise
 @{ ViewData["Title"] = Model.ExerciseName; }
-<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@Model.WorkoutPlanId">← @Model.WorkoutPlan?.Name</a><span class="eyebrow d-block mt-3">PLANNED EXERCISE · @((DayOfWeek)Model.DayOfTheWeek)</span><h1 class="mt-1">@Model.ExerciseName</h1><p>Prescription from your saved workout plan.</p></div></header>
-<section class="app-card form-card"><dl class="details-list"><dt>Plan</dt><dd>@Model.WorkoutPlan?.Name</dd><dt>Training day</dt><dd>@((DayOfWeek)Model.DayOfTheWeek)</dd><dt>Sets</dt><dd>@Model.Sets</dd><dt>Repetitions per set</dt><dd>@Model.Repetitions</dd><dt>Rest between sets</dt><dd>@Model.RestSeconds seconds</dd></dl></section>
+<div class="planned-exercise-detail">
+    <a class="back-link" asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@Model.WorkoutPlanId">← Back to @Model.WorkoutPlan?.Name</a>
+    <header class="planned-exercise-hero"><div><p class="eyebrow">PLANNED EXERCISE <span>·</span> @((DayOfWeek)Model.DayOfTheWeek)</p><h1>@Model.ExerciseName</h1><p>Follow this prescription on your scheduled training day.</p></div><span class="planned-exercise-day-mark" aria-hidden="true">@(((DayOfWeek)Model.DayOfTheWeek).ToString()[..2].ToUpperInvariant())</span></header>
+    <section class="exercise-prescription-panel" aria-labelledby="prescription-heading">
+        <div class="exercise-prescription-heading"><div><h2 id="prescription-heading">Your prescription</h2><p>Targets for each workout session.</p></div><span class="badge-soft @(Model.WorkoutPlan?.IsActive == true ? "badge-success-soft" : "badge-muted")">@(Model.WorkoutPlan?.IsActive == true ? "Active plan" : "Saved plan")</span></div>
+        <div class="exercise-prescription-stats">
+            <article><span>Sets</span><strong>@Model.Sets</strong><small>working sets</small></article>
+            <article><span>Repetitions</span><strong>@Model.Repetitions</strong><small>per set</small></article>
+            <article><span>Rest</span><strong>@Model.RestSeconds <small>sec</small></strong><small>between sets</small></article>
+        </div>
+        <div class="exercise-prescription-context"><span>Workout plan</span><a asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@Model.WorkoutPlanId">@Model.WorkoutPlan?.Name</a><span>Training day</span><strong>@((DayOfWeek)Model.DayOfTheWeek)</strong></div>
+        <div class="exercise-detail-actions">@if (Model.WorkoutPlan?.IsActive == true) { <a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Complete" asp-route-id="@Model.WorkoutPlanId" asp-route-weekday="@((DayOfWeek)Model.DayOfTheWeek)">Log this workout</a> }<a class="btn btn-outline-primary" asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@Model.WorkoutPlanId">View full plan</a></div>
+    </section>
+</div>

@@ -1,16 +1,19 @@
 @model IEnumerable<FitTrack.Models.PlanExercise>
 @{ var exercises = Model.ToList(); ViewData["Title"] = "Planned exercises"; }
-<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-controller="WorkoutPlans" asp-action="Index">← Workout plans</a><span class="eyebrow d-block mt-3">YOUR PRESCRIPTIONS</span><h1 class="mt-1">Planned exercises</h1><p>Review exercises across your saved plans.</p></div></header>
+<div class="plan-exercises-page">
+<a class="back-link" asp-controller="WorkoutPlans" asp-action="Index">← Workout plans</a>
+<header class="plan-exercises-heading"><div><p class="eyebrow">YOUR ROUTINE DETAILS</p><h1>Planned exercises</h1><p>Review each movement and its prescription across your saved plans.</p></div>@if (exercises.Count > 0) { <span class="plan-exercises-total"><strong>@exercises.Count</strong> planned movement@(exercises.Count == 1 ? "" : "s")</span> }</header>
 @if (exercises.Count == 0)
 {
     <div class="empty-state"><h2>No planned exercises yet</h2><p>Create a workout plan to see your exercise prescriptions here.</p><a class="btn btn-primary" asp-controller="WorkoutPlans" asp-action="Manual">Create a plan</a></div>
 }
 else
 {
-    <div class="table-responsive"><table class="table table-hover"><thead><tr><th>Exercise</th><th>Plan</th><th>Day</th><th>Prescription</th><th>Rest</th><th><span class="visually-hidden">Details</span></th></tr></thead><tbody>
+    <div class="data-table-panel planned-exercise-table"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Exercise</th><th>Plan</th><th>Training day</th><th>Sets and reps</th><th>Rest</th><th><span class="visually-hidden">Details</span></th></tr></thead><tbody>
     @foreach (var exercise in exercises)
     {
-        <tr><td class="fw-semibold"><a asp-action="Details" asp-route-id="@exercise.Id">@exercise.ExerciseName</a></td><td><a asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@exercise.WorkoutPlanId">@exercise.WorkoutPlan?.Name</a></td><td>@((DayOfWeek)exercise.DayOfTheWeek)</td><td>@exercise.Sets sets × @exercise.Repetitions reps</td><td>@exercise.RestSeconds sec</td><td><a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@exercise.Id">Details</a></td></tr>
+        <tr><td><a class="planned-exercise-name" asp-action="Details" asp-route-id="@exercise.Id">@exercise.ExerciseName</a></td><td><a class="planned-exercise-plan" asp-controller="WorkoutPlans" asp-action="Details" asp-route-id="@exercise.WorkoutPlanId">@exercise.WorkoutPlan?.Name</a></td><td><span class="planned-day-badge">@((DayOfWeek)exercise.DayOfTheWeek)</span></td><td><span class="planned-prescription">@exercise.Sets <small>sets</small> <i>×</i> @exercise.Repetitions <small>reps</small></span></td><td><span class="planned-rest">@exercise.RestSeconds <small>sec</small></span></td><td><a class="btn btn-outline-primary btn-sm" asp-action="Details" asp-route-id="@exercise.Id">Details</a></td></tr>
     }
-    </tbody></table></div>
+    </tbody></table></div></div>
 }
+</div>

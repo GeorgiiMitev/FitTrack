@@ -1,13 +1,14 @@
 @model FitTrack.Models.WorkoutCompletionViewModel
 @{ ViewData["Title"] = "Log completed workout"; }
-<header class="page-header"><div class="page-header-copy"><a class="back-link" asp-action="Details" asp-route-id="@Model.PlanId">← @Model.PlanName</a><span class="eyebrow d-block mt-3">WORKOUT LOG</span><h1>Log your session</h1><p>Choose a training day, then mark the exercises you completed. Unchecked exercises won’t be saved.</p></div></header>
+<div class="workout-log-page">
+<a class="back-link" asp-action="Details" asp-route-id="@Model.PlanId">← @Model.PlanName</a>
+<header class="workout-log-heading"><div><p class="eyebrow">WORKOUT LOG</p><h1>Log your session</h1><p>Choose a training day, mark each exercise you completed, then record your sets, reps, and weight.</p></div><span class="workout-log-plan-chip">@Model.PlanName</span></header>
 @if (Model.PlanWeekdays.Count > 0)
 {
-    <form asp-action="Complete" asp-route-id="@Model.PlanId" method="get" class="row g-2 align-items-end mb-4">
-        <div class="col-auto"><label for="weekday" class="form-label">Training day</label><select id="weekday" name="weekday" class="form-select">
+    <form asp-action="Complete" asp-route-id="@Model.PlanId" method="get" class="workout-day-picker">
+        <div><label for="weekday" class="form-label">Training day</label><select id="weekday" name="weekday" class="form-select">
             @foreach (var day in Model.PlanWeekdays) { <option value="@day" selected="@(Model.SelectedWeekday == day ? "selected" : null)">@day</option> }
-        </select></div>
-        <div class="col-auto"><button type="submit" class="btn btn-outline-primary">Load day</button></div>
+        </select></div><button type="submit" class="btn btn-outline-primary">Load session</button>
     </form>
 }
 @if (Model.Exercises.Count == 0)
@@ -16,27 +17,26 @@
 }
 else
 {
-<div class="section-heading mt-0"><div><h2>@Model.SelectedWeekday session</h2><p>Enter what you completed today. Prescribed sets and reps are prefilled.</p></div></div>
+<div class="workout-session-heading"><div><h2>@Model.SelectedWeekday session</h2><p>Prescribed sets and reps are prefilled. Unchecked exercises won’t be saved.</p></div><span>@Model.Exercises.Count exercise@(Model.Exercises.Count == 1 ? "" : "s")</span></div>
 <form asp-action="Complete" method="post" data-loading data-loading-label="Saving workout…">
     <input type="hidden" asp-for="PlanId" />
     <input type="hidden" asp-for="SelectedWeekday" />
-    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+    <div asp-validation-summary="All" class="alert alert-danger workout-validation-summary" role="alert"></div>
     @for (var i = 0; i < Model.Exercises.Count; i++)
     {
-        <fieldset class="workout-entry-card mb-3">
-            <legend>@Model.Exercises[i].ExerciseName</legend>
+        <fieldset class="workout-entry-card">
             <input type="hidden" asp-for="Exercises[i].PlanExerciseId" />
             <input type="hidden" asp-for="Exercises[i].ExerciseName" />
             <input type="hidden" asp-for="Exercises[i].PrescribedSets" />
             <input type="hidden" asp-for="Exercises[i].PrescribedRepetitions" />
-            <label class="form-check workout-complete-toggle"><input asp-for="Exercises[i].Completed" class="form-check-input" /><span>Mark this exercise complete</span></label>
-            <div class="row g-3 mt-1"><div class="col-6 col-md-3"><label asp-for="Exercises[i].SetsCompleted" class="form-label">Sets</label><input asp-for="Exercises[i].SetsCompleted" class="form-control" min="1" max="20" /><span class="form-text">Planned: @Model.Exercises[i].PrescribedSets</span></div>
-            <div class="col-6 col-md-3"><label asp-for="Exercises[i].RepetitionsCompleted" class="form-label">Reps per set</label><input asp-for="Exercises[i].RepetitionsCompleted" class="form-control" min="1" max="100" /><span class="form-text">Planned: @Model.Exercises[i].PrescribedRepetitions</span></div>
-            <div class="col-12 col-md-3"><label asp-for="Exercises[i].WeightUsed" class="form-label">Weight (kg)</label><input asp-for="Exercises[i].WeightUsed" class="form-control" min="0" max="1000" step="0.1" /></div>
-            <div class="col-12 col-md-3"><label asp-for="Exercises[i].Notes" class="form-label">Notes</label><textarea asp-for="Exercises[i].Notes" class="form-control" rows="1" maxlength="500"></textarea></div></div>
+            <div class="workout-entry-heading"><div><span class="workout-entry-kicker">EXERCISE @(i + 1)</span><h3>@Model.Exercises[i].ExerciseName</h3></div><label class="workout-complete-toggle"><input asp-for="Exercises[i].Completed" /><span>Completed</span></label></div>
+            <div class="workout-entry-fields"><div><label asp-for="Exercises[i].SetsCompleted" class="form-label">Sets completed</label><input asp-for="Exercises[i].SetsCompleted" class="form-control" min="1" max="20" /><small>Planned: @Model.Exercises[i].PrescribedSets</small></div>
+            <div><label asp-for="Exercises[i].RepetitionsCompleted" class="form-label">Reps per set</label><input asp-for="Exercises[i].RepetitionsCompleted" class="form-control" min="1" max="100" /><small>Planned: @Model.Exercises[i].PrescribedRepetitions</small></div>
+            <div><label asp-for="Exercises[i].WeightUsed" class="form-label">Weight used <span>(kg)</span></label><input asp-for="Exercises[i].WeightUsed" class="form-control" min="0" max="1000" step="0.1" /><small>Enter 0 for bodyweight</small></div>
+            <div class="workout-notes-field"><label asp-for="Exercises[i].Notes" class="form-label">Notes <span>(optional)</span></label><textarea asp-for="Exercises[i].Notes" class="form-control" rows="2" maxlength="500" placeholder="How did this exercise feel?"></textarea></div></div>
         </fieldset>
     }
-    <button type="submit" class="btn btn-primary">Save completed workout</button>
-    <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.PlanId">Cancel</a>
+    <div class="workout-log-submit"><span>Only exercises marked completed will be added to your history.</span><div><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.PlanId">Cancel</a><button type="submit" class="btn btn-primary">Save workout</button></div></div>
 </form>
 }
+</div>
